@@ -296,7 +296,7 @@ HRESULT InitDevice()
         // DirectX 11.0 systems
         DXGI_SWAP_CHAIN_DESC sd;
         ZeroMemory(&sd, sizeof(sd));
-        sd.BufferCount = 1;
+        sd.BufferCount = 2;
         sd.BufferDesc.Width = width;
         sd.BufferDesc.Height = height;
         sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
