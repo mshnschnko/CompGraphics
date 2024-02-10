@@ -1,17 +1,4 @@
-﻿//--------------------------------------------------------------------------------------
-//
-// This application demonstrates creating a Direct3D 11 device
-//
-// http://msdn.microsoft.com/en-us/library/windows/apps/ff729718.aspx
-//
-// THIS CODE AND INFORMATION IS PROVIDED "AS IS" WITHOUT WARRANTY OF
-// ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-// THE IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
-// PARTICULAR PURPOSE.
-//
-// Copyright (c) Microsoft Corporation. All rights reserved.
-//--------------------------------------------------------------------------------------
-#include <windows.h>
+﻿#include <windows.h>
 #include <d3d11_1.h>
 #include <directxcolors.h>
 #include <iostream>
@@ -144,6 +131,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         EndPaint(hWnd, &ps);
         break;
 
+    case WM_GETMINMAXINFO:
+    {
+        LPMINMAXINFO lpMMI = (LPMINMAXINFO)lParam;
+        lpMMI->ptMinTrackSize.x = 256;
+        lpMMI->ptMinTrackSize.y = 256;
+        break;
+    }
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
@@ -174,8 +168,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             UINT height = rc.bottom - rc.top;
 
             D3D11_VIEWPORT vp;
-            vp.Width = width;
-            vp.Height = height;
+            vp.Width = (FLOAT)width;
+            vp.Height = (FLOAT)height;
             vp.MinDepth = 0.0f;
             vp.MaxDepth = 1.0f;
             vp.TopLeftX = 0;
@@ -286,7 +280,8 @@ HRESULT InitDevice()
         sd.SampleDesc.Count = 1;
         sd.SampleDesc.Quality = 0;
         sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-        sd.BufferCount = 1;
+        sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+        sd.BufferCount = 2;
 
         hr = dxgiFactory2->CreateSwapChainForHwnd(g_pd3dDevice, g_hWnd, &sd, nullptr, nullptr, &g_pSwapChain1);
         if (SUCCEEDED(hr))
@@ -311,6 +306,7 @@ HRESULT InitDevice()
         sd.OutputWindow = g_hWnd;
         sd.SampleDesc.Count = 1;
         sd.SampleDesc.Quality = 0;
+        sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
         sd.Windowed = TRUE;
 
         hr = dxgiFactory->CreateSwapChain(g_pd3dDevice, &sd, &g_pSwapChain);
@@ -359,7 +355,7 @@ void Render()
 {
     // Just clear the backbuffer
 
-    float ClearColor[4] = {0.19, 0.84, 0.78, 1.0}; // RGBA
+    float ClearColor[4] = {(float)0.19, (float)0.84, (float)0.78, (float)1.0}; // RGBA
 
     g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, ClearColor);
     g_pSwapChain->Present(0, 0);
