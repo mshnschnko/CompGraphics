@@ -4,10 +4,15 @@
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 #include <iostream>
+#include <xstring>
 #include "resource.h"
 #include "framework.h"
 
-#include <ctime>
+#include <direct.h>
+#include <limits.h>
+
+#define MAX_LOADSTRING 600
+WCHAR szTitle[MAX_LOADSTRING];
 
 using namespace DirectX;
 
@@ -62,6 +67,23 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     if (FAILED(InitWindow(hInstance, nCmdShow)))
         return 0;
 
+    //LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
+
+    //std::wstring dir;
+    //dir.resize(MAX_LOADSTRING + 1);
+    //GetCurrentDirectory(MAX_LOADSTRING + 1, &dir[0]);
+    //LPCWSTR sw = dir.c_str();
+    //MessageBox(nullptr, sw, L"Error", MB_OK);
+    //size_t configPos = dir.find(L"x64");
+    ////if (configPos != std::wstring::npos)
+    ////{
+    ////    dir.resize(configPos);
+    ////    dir += szTitle;
+    ////    SetCurrentDirectory(dir.c_str());
+    ////}
+    //LPCWSTR sw2 = dir.c_str();
+    //MessageBox(nullptr, sw2, L"Error", MB_OK);
+
     if (FAILED(InitDevice()))
     {
         CleanupDevice();
@@ -101,7 +123,7 @@ HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow)
     wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wcex.lpszMenuName = nullptr;
-    wcex.lpszClassName = L"InitDX";
+    wcex.lpszClassName = L"TRIANGLE";
     wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_LAB));
     if (!RegisterClassEx(&wcex))
         return E_FAIL;
@@ -109,7 +131,7 @@ HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow)
     g_hInst = hInstance;
     RECT rc = { 0, 0, 1280, 720 };
     AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-    g_hWnd = CreateWindow(L"InitDX", L"Anishchenko Mikhail",
+    g_hWnd = CreateWindow(L"TRIANGLE", L"Anishchenko Mikhail",
         WS_OVERLAPPED | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX,
         CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top, nullptr, nullptr, hInstance,
         nullptr);
@@ -181,6 +203,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             vp.TopLeftX = 0;
             vp.TopLeftY = 0;
             g_pImmediateContext->RSSetViewports(1, &vp);
+
+            wWidth = width;
+            wHeight = height;
         }
         break;
 
@@ -196,14 +221,14 @@ HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCS
 {
     HRESULT hr = S_OK;
 
-    DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+    DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_EFFECT_CHILD_EFFECT;
 #ifdef _DEBUG
     dwShaderFlags |= D3DCOMPILE_DEBUG;
     dwShaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
     ID3DBlob* pErrorBlob = nullptr;
-    hr = D3DCompileFromFile(szFileName, nullptr, nullptr, szEntryPoint, szShaderModel,
+    hr = D3DCompileFromFile(szFileName, nullptr, D3D_COMPILE_STANDARD_FILE_INCLUDE, szEntryPoint, szShaderModel,
         dwShaderFlags, 0, ppBlobOut, &pErrorBlob);
     if (FAILED(hr))
     {
@@ -369,11 +394,12 @@ HRESULT InitDevice()
     g_pImmediateContext->RSSetViewports(1, &vp);
 
     ID3DBlob* pVSBlob = nullptr;
-    hr = CompileShaderFromFile(L"VertexShader.hlsl", "main", "vs_5_0", &pVSBlob);
+    //hr = CompileShaderFromFile(L"VertexShader.hlsl", "main", "vs_5_0", &pVSBlob);
+    hr = D3DReadFileToBlob(L"VertexShader.cso", &pVSBlob);
     if (FAILED(hr))
     {
         MessageBox(nullptr,
-            L"The FX file cannot be compiled.  Please run this executable from the directory that contains the FX file.", L"Error", MB_OK);
+            L"The vertex FX file cannot be compiled.  Please run this executable from the directory that contains the FX file.", L"Error", MB_OK);
         return hr;
     }
 
@@ -400,11 +426,12 @@ HRESULT InitDevice()
     g_pImmediateContext->IASetInputLayout(g_pVertexLayout);
 
     ID3DBlob* pPSBlob = nullptr;
-    hr = CompileShaderFromFile(L"PixelShader.hlsl", "main", "ps_5_0", &pPSBlob);
+    //hr = CompileShaderFromFile(L"PixelShader.hlsl", "main", "ps_5_0", &pPSBlob);
+    hr = D3DReadFileToBlob(L"PixelShader.cso", &pPSBlob);
     if (FAILED(hr))
     {
         MessageBox(nullptr,
-            L"The FX file cannot be compiled.  Please run this executable from the directory that contains the FX file.", L"Error", MB_OK);
+            L"The pixel FX file cannot be compiled.  Please run this executable from the directory that contains the FX file.", L"Error", MB_OK);
         return hr;
     }
 
@@ -517,6 +544,7 @@ void Render()
 void CleanupDevice()
 {
     if (g_pImmediateContext) g_pImmediateContext->ClearState();
+    if (g_pIndexBuffer) g_pIndexBuffer->Release();
     if (g_pVertexBuffer) g_pVertexBuffer->Release();
     if (g_pVertexLayout) g_pVertexLayout->Release();
     if (g_pVertexShader) g_pVertexShader->Release();
