@@ -374,7 +374,7 @@ HRESULT InitDevice()
     if (FAILED(hr))
     {
         MessageBox(nullptr,
-            L"The vertex FX file cannot be compiled.  Please run this executable from the directory that contains the FX file.", L"Error", MB_OK);
+            L"The VertexShader.cso file not found.", L"Error", MB_OK);
         return hr;
     }
 
@@ -405,7 +405,7 @@ HRESULT InitDevice()
     if (FAILED(hr))
     {
         MessageBox(nullptr,
-            L"The pixel FX file cannot be compiled.  Please run this executable from the directory that contains the FX file.", L"Error", MB_OK);
+            L"The PixelShader.cso file not found.", L"Error", MB_OK);
         return hr;
     }
 
