@@ -8,13 +8,6 @@
 #include "resource.h"
 #include "framework.h"
 
-#include <direct.h>
-#include <limits.h>
-
-#define MAX_LOADSTRING 600
-WCHAR szTitle[MAX_LOADSTRING];
-
-using namespace DirectX;
 
 //--------------------------------------------------------------------------------------
 // Global Variables
@@ -66,23 +59,6 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
     if (FAILED(InitWindow(hInstance, nCmdShow)))
         return 0;
-
-    //LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-
-    //std::wstring dir;
-    //dir.resize(MAX_LOADSTRING + 1);
-    //GetCurrentDirectory(MAX_LOADSTRING + 1, &dir[0]);
-    //LPCWSTR sw = dir.c_str();
-    //MessageBox(nullptr, sw, L"Error", MB_OK);
-    //size_t configPos = dir.find(L"x64");
-    ////if (configPos != std::wstring::npos)
-    ////{
-    ////    dir.resize(configPos);
-    ////    dir += szTitle;
-    ////    SetCurrentDirectory(dir.c_str());
-    ////}
-    //LPCWSTR sw2 = dir.c_str();
-    //MessageBox(nullptr, sw2, L"Error", MB_OK);
 
     if (FAILED(InitDevice()))
     {
@@ -394,7 +370,6 @@ HRESULT InitDevice()
     g_pImmediateContext->RSSetViewports(1, &vp);
 
     ID3DBlob* pVSBlob = nullptr;
-    //hr = CompileShaderFromFile(L"VertexShader.hlsl", "main", "vs_5_0", &pVSBlob);
     hr = D3DReadFileToBlob(L"VertexShader.cso", &pVSBlob);
     if (FAILED(hr))
     {
@@ -426,7 +401,6 @@ HRESULT InitDevice()
     g_pImmediateContext->IASetInputLayout(g_pVertexLayout);
 
     ID3DBlob* pPSBlob = nullptr;
-    //hr = CompileShaderFromFile(L"PixelShader.hlsl", "main", "ps_5_0", &pPSBlob);
     hr = D3DReadFileToBlob(L"PixelShader.cso", &pPSBlob);
     if (FAILED(hr))
     {
