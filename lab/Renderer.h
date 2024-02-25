@@ -9,6 +9,7 @@
 #include <ctime>
 
 #include "Camera.h"
+#include "InputHandler.h"
 
 
 struct SimpleVertex
@@ -31,7 +32,7 @@ public:
 	Renderer(const Renderer&) = delete;
 	Renderer(Renderer&&) = delete;
 
-	HRESULT InitDevice(const HWND& g_hWnd);
+	HRESULT Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT screenWidth, UINT screenHeight);
 
 	bool Frame();
 
@@ -42,7 +43,11 @@ public:
 	void ResizeWindow(const HWND& g_hWnd);
 
 private:
+	HRESULT InitDevice(const HWND& g_hWnd);
+
 	HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut);
+
+	void HandleInput();
 
 	Renderer() = default;
 
@@ -67,7 +72,8 @@ private:
 	ID3D11RasterizerState* g_pRasterizerState = nullptr;
 
 	std::clock_t init_time;
-	Camera* camera = nullptr;
+	Camera camera;
+	InputHandler input;
 
-	UINT wWidth = 1280, wHeight = 720;
+	float angle_velocity = XM_PI;
 };

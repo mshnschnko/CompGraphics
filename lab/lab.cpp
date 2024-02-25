@@ -6,9 +6,8 @@
 #include "Renderer.h"
 
 
-#define MAX_LOADSTRING 300
-WCHAR szTitle[MAX_LOADSTRING];
-
+constexpr int start_w = 1280;
+constexpr int start_h = 720;
 
 HINSTANCE       g_hInst = nullptr;
 HWND            g_hWnd = nullptr;
@@ -37,7 +36,7 @@ HRESULT InitWindow(HINSTANCE hInstance, int nCmdShow)
         return E_FAIL;
 
     g_hInst = hInstance;
-    RECT rc = { 0, 0, 1280, 720 };
+    RECT rc = { 0, 0, start_w, start_h };
     AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
     g_hWnd = CreateWindow(L"Window", L"Anishchenko Mikhail",
         WS_OVERLAPPED | WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX,
@@ -61,7 +60,7 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
     if (FAILED(InitWindow(hInstance, nCmdShow)))
         return 0;
 
-    if (FAILED(Renderer::GetInstance().InitDevice(g_hWnd)))
+    if (FAILED(Renderer::GetInstance().Init(g_hWnd, g_hInst, start_w, start_h)))
     {
         Renderer::GetInstance().CleanupDevice();
         return 0;

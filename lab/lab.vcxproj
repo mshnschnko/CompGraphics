@@ -109,7 +109,7 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dxgi.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxgi.lib;d3d11.lib;d3dcompiler.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(ProjectDir)VertexShader.cso" "$(OutDir)VertexShader.cso"
@@ -136,7 +136,7 @@ copy "$(ProjectDir)PixelShader.cso" "$(OutDir)PixelShader.cso"
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>dxgi.lib;d3d11.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>dxgi.lib;d3d11.lib;d3dcompiler.lib;dinput8.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
       <AdditionalIncludeDirectories>D:\CompGraphics\lab</AdditionalIncludeDirectories>
@@ -151,6 +151,7 @@ copy "$(ProjectDir)PixelShader.cso" "$(OutDir)PixelShader.cso"
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="InputHandler.h" />
     <ClInclude Include="lab.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
@@ -158,6 +159,7 @@ copy "$(ProjectDir)PixelShader.cso" "$(OutDir)PixelShader.cso"
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="InputHandler.cpp" />
     <ClCompile Include="lab.cpp" />
     <ClCompile Include="Renderer.cpp" />
   </ItemGroup>

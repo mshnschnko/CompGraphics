@@ -5,13 +5,19 @@
 
 using namespace DirectX;
 
+constexpr float movement_downshifting = 300.f;
+
 class Camera {
 public:
 	HRESULT Init();
 
+	void Realese() {};
+
 	void Frame();
 
 	void GetBaseViewMatrix(XMMATRIX& viewMatrix);
+
+	void Move(float dx, float dy, float wheel);
 
 private:
 	XMMATRIX viewMatrix;

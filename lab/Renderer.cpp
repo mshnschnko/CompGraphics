@@ -343,34 +343,47 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
     if (FAILED(hr))
         return hr;
 
-    camera = new Camera();
-    hr = camera->Init();
-    if (FAILED(hr))
-        return hr;
-
     return S_OK;
 }
 
-bool Renderer::Frame() {
-    HRESULT hr = S_OK;
+HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT screenWidth, UINT screenHeight) {
+    HRESULT hr = input.InitInputs(g_hInstance, g_hWnd, screenWidth, screenHeight);
+    if (FAILED(hr))
+        return hr;
 
-    camera->Frame();
+    hr = camera.Init();
+    if (FAILED(hr))
+        return hr;
+
+    hr = InitDevice(g_hWnd);
+}
+
+void Renderer::HandleInput() {
+    XMFLOAT3 mouseMove = input.GetMouseInputs();
+    camera.Move(mouseMove.x, mouseMove.y, mouseMove.z);
+}
+
+bool Renderer::Frame() {
+    input.ReadMouse();
+
+    HandleInput();
+    camera.Frame();
 
     auto duration = (1.0 * clock() - init_time) / CLOCKS_PER_SEC;
 
     WorldMatrixBuffer worldMatrixBuffer;
 
-    worldMatrixBuffer.worldMatrix = XMMatrixRotationY((float)duration);
+    worldMatrixBuffer.worldMatrix = XMMatrixRotationY((float)duration * angle_velocity);
 
     g_pImmediateContext->UpdateSubresource(g_pWorldMatrixBuffer, 0, nullptr, &worldMatrixBuffer, 0, 0);
 
     XMMATRIX mView;
-    camera->GetBaseViewMatrix(mView);
+    camera.GetBaseViewMatrix(mView);
 
-    XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, wWidth / (FLOAT)wHeight, 0.01f, 100.0f);
+    XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)input.GetWidth() / (FLOAT)input.GetHeight(), 0.01f, 100.0f);
 
     D3D11_MAPPED_SUBRESOURCE subresource;
-    hr = g_pImmediateContext->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    HRESULT hr = g_pImmediateContext->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
     if (FAILED(hr))
         return FAILED(hr);
 
@@ -394,8 +407,8 @@ void Renderer::Render() {
     D3D11_VIEWPORT viewport;
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
-    viewport.Width = (FLOAT)wWidth;
-    viewport.Height = (FLOAT)wHeight;
+    viewport.Width = (FLOAT)input.GetWidth();
+    viewport.Height = (FLOAT)input.GetHeight();
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     g_pImmediateContext->RSSetViewports(1, &viewport);
@@ -403,8 +416,8 @@ void Renderer::Render() {
     D3D11_RECT rect;
     rect.left = 0;
     rect.top = 0;
-    rect.right = wWidth;
-    rect.bottom = wHeight;
+    rect.right = input.GetWidth();
+    rect.bottom = input.GetHeight();
     g_pImmediateContext->RSSetScissorRects(1, &rect);
 
     g_pImmediateContext->RSSetState(g_pRasterizerState);
@@ -426,6 +439,8 @@ void Renderer::Render() {
 }
 
 void Renderer::CleanupDevice() {
+    camera.Realese();
+    input.Realese();
     if (g_pImmediateContext) g_pImmediateContext->ClearState();
 
     if (g_pRasterizerState) g_pRasterizerState->Release();
@@ -480,7 +495,6 @@ void Renderer::ResizeWindow(const HWND& g_hWnd) {
         vp.TopLeftY = 0;
         g_pImmediateContext->RSSetViewports(1, &vp);
 
-        wWidth = width;
-        wHeight = height;
+        input.Resize(width, height);
     }
 }
