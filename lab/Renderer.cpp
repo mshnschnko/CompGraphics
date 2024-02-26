@@ -356,6 +356,10 @@ HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT sc
         return hr;
 
     hr = InitDevice(g_hWnd);
+    if (FAILED(hr))
+        return hr;
+    
+    return S_OK;
 }
 
 void Renderer::HandleInput() {
