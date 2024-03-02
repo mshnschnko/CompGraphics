@@ -114,8 +114,11 @@
     <PostBuildEvent>
       <Command>copy "$(ProjectDir)VertexShader.cso" "$(OutDir)VertexShader.cso"
 copy "$(ProjectDir)PixelShader.cso" "$(OutDir)PixelShader.cso"
+copy "$(ProjectDir)SkyboxVertexShader.cso" "$(OutDir)SkyboxVertexShader.cso"
+copy "$(ProjectDir)SkyboxPixelShader.cso" "$(OutDir)SkyboxPixelShader.cso"
 copy "$(ProjectDir)shrek1.dds" "$(OutDir)shrek1.dds"
-copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"</Command>
+copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"
+copy "$(ProjectDir)skybox1.dds" "$(OutDir)skybox1.dds"</Command>
     </PostBuildEvent>
     <FxCompile>
       <AdditionalIncludeDirectories>D:\CompGraphics\lab</AdditionalIncludeDirectories>
@@ -146,17 +149,18 @@ copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"</Command>
     <PostBuildEvent>
       <Command>copy "$(ProjectDir)VertexShader.cso" "$(OutDir)VertexShader.cso"
 copy "$(ProjectDir)PixelShader.cso" "$(OutDir)PixelShader.cso"
+copy "$(ProjectDir)SkyboxVertexShader.cso" "$(OutDir)SkyboxVertexShader.cso"
+copy "$(ProjectDir)SkyboxPixelShader.cso" "$(OutDir)SkyboxPixelShader.cso"
 copy "$(ProjectDir)shrek1.dds" "$(OutDir)shrek1.dds"
-copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"</Command>
+copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"
+copy "$(ProjectDir)skybox1.dds" "$(OutDir)skybox1.dds"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
     <ClInclude Include="DDSTextureLoader.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="InputHandler.h" />
     <ClInclude Include="lab.h" />
-    <ClInclude Include="NewInput.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="skybox.h" />
@@ -166,9 +170,7 @@ copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"</Command>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="DDSTextureLoader.cpp" />
-    <ClCompile Include="InputHandler.cpp" />
     <ClCompile Include="lab.cpp" />
-    <ClCompile Include="NewInput.cpp" />
     <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="skybox.cpp" />
     <ClCompile Include="texture.cpp" />
