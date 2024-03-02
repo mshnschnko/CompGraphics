@@ -5,17 +5,19 @@
 #include <directxmath.h>
 #include <directxcolors.h>
 #include <directxmath.h>
-
 #include <ctime>
 
 #include "Camera.h"
 #include "InputHandler.h"
+#include "NewInput.h"
+#include "texture.h"
+#include "skybox.h"
 
 
 struct SimpleVertex
 {
 	float x, y, z;
-	COLORREF color;
+	float u, v;
 };
 
 struct WorldMatrixBuffer {
@@ -42,12 +44,14 @@ public:
 
 	void ResizeWindow(const HWND& g_hWnd);
 
+	void HandleInput(int x, int y);
+	void MouseRBPressed(bool pressed, int x, int y);
+	void MouseWheel(int wheel);
 private:
 	HRESULT InitDevice(const HWND& g_hWnd);
 
 	HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut);
 
-	void HandleInput();
 
 	Renderer() = default;
 
@@ -70,10 +74,14 @@ private:
 	ID3D11Buffer* g_pWorldMatrixBuffer = nullptr;
 	ID3D11Buffer* g_pSceneMatrixBuffer = nullptr;
 	ID3D11RasterizerState* g_pRasterizerState = nullptr;
+	ID3D11SamplerState* g_pSamplerState = nullptr;
 
 	std::clock_t init_time;
 	Camera camera;
 	InputHandler input;
+	NewInput ni;
+	Skybox skybox;
+	Texture texture;
 
-	float angle_velocity = XM_PI;
+	float angle_velocity = XM_PIDIV2;
 };

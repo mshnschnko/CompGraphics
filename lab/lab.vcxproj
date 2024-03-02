@@ -114,7 +114,8 @@
     <PostBuildEvent>
       <Command>copy "$(ProjectDir)VertexShader.cso" "$(OutDir)VertexShader.cso"
 copy "$(ProjectDir)PixelShader.cso" "$(OutDir)PixelShader.cso"
-</Command>
+copy "$(ProjectDir)shrek1.dds" "$(OutDir)shrek1.dds"
+copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"</Command>
     </PostBuildEvent>
     <FxCompile>
       <AdditionalIncludeDirectories>D:\CompGraphics\lab</AdditionalIncludeDirectories>
@@ -145,23 +146,32 @@ copy "$(ProjectDir)PixelShader.cso" "$(OutDir)PixelShader.cso"
     <PostBuildEvent>
       <Command>copy "$(ProjectDir)VertexShader.cso" "$(OutDir)VertexShader.cso"
 copy "$(ProjectDir)PixelShader.cso" "$(OutDir)PixelShader.cso"
-</Command>
+copy "$(ProjectDir)shrek1.dds" "$(OutDir)shrek1.dds"
+copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="DDSTextureLoader.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="InputHandler.h" />
     <ClInclude Include="lab.h" />
+    <ClInclude Include="NewInput.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="skybox.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="texture.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="DDSTextureLoader.cpp" />
     <ClCompile Include="InputHandler.cpp" />
     <ClCompile Include="lab.cpp" />
+    <ClCompile Include="NewInput.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="skybox.cpp" />
+    <ClCompile Include="texture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="lab.rc" />
@@ -176,6 +186,18 @@ copy "$(ProjectDir)PixelShader.cso" "$(OutDir)PixelShader.cso"
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="SkyboxPixelShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="SkyboxVertexShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="VertexShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>

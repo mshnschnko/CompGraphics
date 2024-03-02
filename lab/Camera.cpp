@@ -10,16 +10,21 @@ HRESULT Camera::Init() {
     return S_OK;
 }
 
-void Camera::Frame() {
+XMFLOAT3 Camera::GetPos() {
     XMFLOAT3 pos = XMFLOAT3(
         cosf(theta) * cosf(phi),
         sinf(theta),
-        cosf(theta) * sinf(phi)
-    );
+        cosf(theta) * sinf(phi));
 
     pos.x = pos.x * distanceToPoint + pointOfInterest.x;
     pos.y = pos.y * distanceToPoint + pointOfInterest.y;
     pos.z = pos.z * distanceToPoint + pointOfInterest.z;
+
+    return pos;
+};
+
+void Camera::Frame() {
+    XMFLOAT3 pos = GetPos();
 
     float upTheta = theta + XM_PIDIV2;
     XMFLOAT3 up = XMFLOAT3(

@@ -198,7 +198,7 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
     D3D11_INPUT_ELEMENT_DESC layout[] =
     {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
     UINT numElements = ARRAYSIZE(layout);
 
@@ -226,35 +226,47 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
 
     init_time = clock();
 
+    hr = texture.InitEx(g_pd3dDevice, g_pImmediateContext, L"./shrek1.dds");
+
     SimpleVertex vertices[] = {
-         { -1.0f, 1.0f, -1.0f, RGB(0, 0, 255) },
-         { 1.0f, 1.0f, -1.0f, RGB(0, 255, 0) },
-         { 1.0f, 1.0f, 1.0f, RGB(0, 255, 255) },
-         { -1.0f, 1.0f, 1.0f, RGB(255, 0, 0) },
-         { -1.0f, -1.0f, -1.0f, RGB(255, 0, 255) },
-         { 1.0f, -1.0f, -1.0f, RGB(255, 255, 0) },
-         { 1.0f, -1.0f, 1.0f, RGB(255, 255, 255) },
-         { -1.0f, -1.0f, 1.0f, RGB(0, 0, 0) }
+        {-0.5, -0.5,  0.5, 0, 1},
+        { 0.5, -0.5,  0.5, 1, 1},
+        { 0.5, -0.5, -0.5, 1, 0},
+        {-0.5, -0.5, -0.5, 0, 0},
+
+        {-0.5,  0.5, -0.5, 1, 1},
+        { 0.5,  0.5, -0.5, 0, 1},
+        { 0.5,  0.5,  0.5, 0, 0},
+        {-0.5,  0.5,  0.5, 1, 0},
+
+        { 0.5, -0.5, -0.5, 0, 1},
+        { 0.5, -0.5,  0.5, 1, 1},
+        { 0.5,  0.5,  0.5, 1, 0},
+        { 0.5,  0.5, -0.5, 0, 0},
+
+        {-0.5, -0.5,  0.5, 0, 1},
+        {-0.5, -0.5, -0.5, 1, 1},
+        {-0.5,  0.5, -0.5, 1, 0},
+        {-0.5,  0.5,  0.5, 0, 0},
+
+        { 0.5, -0.5,  0.5, 1, 1},
+        {-0.5, -0.5,  0.5, 0, 1},
+        {-0.5,  0.5,  0.5, 0, 0},
+        { 0.5,  0.5,  0.5, 1, 0},
+
+        {-0.5, -0.5, -0.5, 1, 1},
+        { 0.5, -0.5, -0.5, 0, 1},
+        { 0.5,  0.5, -0.5, 0, 0},
+        {-0.5,  0.5, -0.5, 1, 0}
     };
 
     USHORT indices[] = {
-          3,1,0,
-          2,1,3,
-
-          0,5,4,
-          1,5,0,
-
-          3,4,7,
-          0,4,3,
-
-          1,6,5,
-          2,6,1,
-
-          2,7,6,
-          3,7,2,
-
-          6,4,5,
-          7,4,6,
+          0, 2, 1, 0, 3, 2,
+          4, 6, 5, 4, 7, 6,
+          8, 10, 9, 8, 11, 10,
+          12, 14, 13, 12, 15, 14,
+          16, 18, 17, 16, 19, 18,
+          20, 22, 21, 20, 23, 22
     };
 
     D3D11_BUFFER_DESC bd;
@@ -343,11 +355,36 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
     if (FAILED(hr))
         return hr;
 
+    D3D11_SAMPLER_DESC descSmplr = {};
+    descSmplr.Filter = D3D11_FILTER_ANISOTROPIC;
+    descSmplr.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    descSmplr.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    descSmplr.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    descSmplr.MinLOD = -D3D11_FLOAT32_MAX;
+    descSmplr.MaxLOD = D3D11_FLOAT32_MAX;
+    descSmplr.MipLODBias = 0.0f;
+    descSmplr.MaxAnisotropy = 16;
+    descSmplr.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    descSmplr.BorderColor[0] =
+        descSmplr.BorderColor[1] =
+        descSmplr.BorderColor[2] =
+        descSmplr.BorderColor[3] = 1.0f;
+
+    hr = g_pd3dDevice->CreateSamplerState(&descSmplr, &g_pSamplerState);
+    if (FAILED(hr))
+        return hr;
+
+    skybox.Init(g_pd3dDevice, g_pImmediateContext, width, height);
+
     return S_OK;
 }
 
 HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT screenWidth, UINT screenHeight) {
     HRESULT hr = input.InitInputs(g_hInstance, g_hWnd, screenWidth, screenHeight);
+    if (FAILED(hr))
+        return hr;
+
+    hr = ni.InitInputs(screenWidth, screenHeight);
     if (FAILED(hr))
         return hr;
 
@@ -362,15 +399,23 @@ HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT sc
     return S_OK;
 }
 
-void Renderer::HandleInput() {
-    XMFLOAT3 mouseMove = input.GetMouseInputs();
+void Renderer::HandleInput(int x, int y) {
+    XMFLOAT3 mouseMove = ni.MouseMoved(x, y, angle_velocity); //input.GetMouseInputs();
     camera.Move(mouseMove.x, mouseMove.y, mouseMove.z);
+}
+
+void Renderer::MouseRBPressed(bool pressed, int x, int y) {
+    ni.MouseRBPressed(pressed, x, y);
+}
+
+void Renderer::MouseWheel(int wheel) {
+    camera.Move(0.0, 0.0, wheel);
 }
 
 bool Renderer::Frame() {
     input.ReadMouse();
 
-    HandleInput();
+    //HandleInput();
     camera.Frame();
 
     auto duration = (1.0 * clock() - init_time) / CLOCKS_PER_SEC;
@@ -394,6 +439,7 @@ bool Renderer::Frame() {
     SceneMatrixBuffer& sceneBuffer = *reinterpret_cast<SceneMatrixBuffer*>(subresource.pData);
     sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(mView, mProjection);
     g_pImmediateContext->Unmap(g_pSceneMatrixBuffer, 0);
+    skybox.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos());
 
     return SUCCEEDED(hr);
 }
@@ -424,11 +470,19 @@ void Renderer::Render() {
     rect.bottom = input.GetHeight();
     g_pImmediateContext->RSSetScissorRects(1, &rect);
 
+    skybox.Render(g_pImmediateContext);
+
     g_pImmediateContext->RSSetState(g_pRasterizerState);
+
+    ID3D11SamplerState* samplers[] = { g_pSamplerState };
+    g_pImmediateContext->PSSetSamplers(0, 1, samplers);
+
+    ID3D11ShaderResourceView* resources[] = { texture.GetTexture() };
+    g_pImmediateContext->PSSetShaderResources(0, 1, resources);
 
     g_pImmediateContext->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
     ID3D11Buffer* vertexBuffers[] = { g_pVertexBuffer };
-    UINT strides[] = { 16 };
+    UINT strides[] = { 20 };
     UINT offsets[] = { 0 };
     g_pImmediateContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
     g_pImmediateContext->IASetInputLayout(g_pVertexLayout);
@@ -445,8 +499,11 @@ void Renderer::Render() {
 void Renderer::CleanupDevice() {
     camera.Realese();
     input.Realese();
+    texture.Release();
+    skybox.Realese();
     if (g_pImmediateContext) g_pImmediateContext->ClearState();
 
+    if (g_pSamplerState) g_pSamplerState->Release();
     if (g_pRasterizerState) g_pRasterizerState->Release();
     if (g_pWorldMatrixBuffer) g_pWorldMatrixBuffer->Release();
     if (g_pSceneMatrixBuffer) g_pSceneMatrixBuffer->Release();
@@ -500,5 +557,6 @@ void Renderer::ResizeWindow(const HWND& g_hWnd) {
         g_pImmediateContext->RSSetViewports(1, &vp);
 
         input.Resize(width, height);
+        skybox.Resize(width, height);
     }
 }
