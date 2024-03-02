@@ -44,12 +44,14 @@ void Camera::GetBaseViewMatrix(XMMATRIX& viewMatrix) {
     viewMatrix = this->viewMatrix;
 };
 
-void Camera::Move(float dx, float dy, float wheel) {
+void Camera::Move(float dx, float dy) {
     phi -= dx / movement_downshifting;
 
     theta += dy / movement_downshifting;
     theta = min(max(theta, -XM_PIDIV2), XM_PIDIV2);
+}
 
+void Camera::UpdateDistance(float wheel) {
     distanceToPoint -= wheel / movement_downshifting;
     distanceToPoint = max(distanceToPoint, 1.0f);
 }

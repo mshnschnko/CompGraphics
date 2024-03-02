@@ -12,7 +12,6 @@ public:
     void MouseRBPressed(bool pressed, int x, int y);
     XMFLOAT3 MouseMoved(int x, int y, float angle_velocity);
     void MouseWheel(int delta);
-    void KeyPressed(int keyCode);
 
 private:
     UINT m_width;

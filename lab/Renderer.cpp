@@ -380,15 +380,13 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
 }
 
 HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT screenWidth, UINT screenHeight) {
-    HRESULT hr = input.InitInputs(g_hInstance, g_hWnd, screenWidth, screenHeight);
-    if (FAILED(hr))
-        return hr;
+    Resize(screenWidth, screenHeight);
 
-    hr = ni.InitInputs(screenWidth, screenHeight);
-    if (FAILED(hr))
-        return hr;
+    m_rbPressed = false;
+    m_prevMouseX = 0;
+    m_prevMouseY = 0;
 
-    hr = camera.Init();
+    HRESULT hr = camera.Init();
     if (FAILED(hr))
         return hr;
 
@@ -399,23 +397,31 @@ HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT sc
     return S_OK;
 }
 
-void Renderer::HandleInput(int x, int y) {
-    XMFLOAT3 mouseMove = ni.MouseMoved(x, y, angle_velocity); //input.GetMouseInputs();
-    camera.Move(mouseMove.x, mouseMove.y, mouseMove.z);
+void Renderer::MouseMoved(int x, int y) {
+    if (m_rbPressed) {
+        float dx = (float)(x - m_prevMouseX) * angle_velocity;
+        float dy = (float)(y - m_prevMouseY) * angle_velocity;
+
+        m_prevMouseX = x;
+        m_prevMouseY = y;
+        camera.Move(dx, dy);
+    }
 }
 
 void Renderer::MouseRBPressed(bool pressed, int x, int y) {
-    ni.MouseRBPressed(pressed, x, y);
+    m_rbPressed = pressed;
+
+    if (m_rbPressed) {
+        m_prevMouseX = x;
+        m_prevMouseY = y;
+    }
 }
 
 void Renderer::MouseWheel(int wheel) {
-    camera.Move(0.0, 0.0, wheel);
+    camera.UpdateDistance(wheel);
 }
 
 bool Renderer::Frame() {
-    input.ReadMouse();
-
-    //HandleInput();
     camera.Frame();
 
     auto duration = (1.0 * clock() - init_time) / CLOCKS_PER_SEC;
@@ -429,7 +435,7 @@ bool Renderer::Frame() {
     XMMATRIX mView;
     camera.GetBaseViewMatrix(mView);
 
-    XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)input.GetWidth() / (FLOAT)input.GetHeight(), 0.01f, 100.0f);
+    XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)m_width / (FLOAT)m_height, 0.01f, 100.0f);
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT hr = g_pImmediateContext->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
@@ -457,8 +463,8 @@ void Renderer::Render() {
     D3D11_VIEWPORT viewport;
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
-    viewport.Width = (FLOAT)input.GetWidth();
-    viewport.Height = (FLOAT)input.GetHeight();
+    viewport.Width = (FLOAT)m_width;
+    viewport.Height = (FLOAT)m_height;
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     g_pImmediateContext->RSSetViewports(1, &viewport);
@@ -466,8 +472,8 @@ void Renderer::Render() {
     D3D11_RECT rect;
     rect.left = 0;
     rect.top = 0;
-    rect.right = input.GetWidth();
-    rect.bottom = input.GetHeight();
+    rect.right = m_width;
+    rect.bottom = m_height;
     g_pImmediateContext->RSSetScissorRects(1, &rect);
 
     skybox.Render(g_pImmediateContext);
@@ -496,9 +502,13 @@ void Renderer::Render() {
     g_pSwapChain->Present(0, 0);
 }
 
+void Renderer::Resize(UINT screenWidth, UINT screenHeight) {
+    m_width = screenWidth;
+    m_height = screenHeight;
+}
+
 void Renderer::CleanupDevice() {
     camera.Realese();
-    input.Realese();
     texture.Release();
     skybox.Realese();
     if (g_pImmediateContext) g_pImmediateContext->ClearState();
@@ -556,7 +566,7 @@ void Renderer::ResizeWindow(const HWND& g_hWnd) {
         vp.TopLeftY = 0;
         g_pImmediateContext->RSSetViewports(1, &vp);
 
-        input.Resize(width, height);
+        Resize(width, height);
         skybox.Resize(width, height);
     }
 }

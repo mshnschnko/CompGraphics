@@ -8,8 +8,6 @@
 #include <ctime>
 
 #include "Camera.h"
-#include "InputHandler.h"
-#include "NewInput.h"
 #include "texture.h"
 #include "skybox.h"
 
@@ -44,14 +42,17 @@ public:
 
 	void ResizeWindow(const HWND& g_hWnd);
 
-	void HandleInput(int x, int y);
+	void MouseMoved(int x, int y);
+
 	void MouseRBPressed(bool pressed, int x, int y);
+
 	void MouseWheel(int wheel);
 private:
 	HRESULT InitDevice(const HWND& g_hWnd);
 
-	HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut);
+	void Resize(UINT screenWidth, UINT screenHeight);
 
+	HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut);
 
 	Renderer() = default;
 
@@ -78,10 +79,13 @@ private:
 
 	std::clock_t init_time;
 	Camera camera;
-	InputHandler input;
-	NewInput ni;
 	Skybox skybox;
 	Texture texture;
 
+	UINT m_width;
+	UINT m_height;
+	bool m_rbPressed;
+	int m_prevMouseX;
+	int m_prevMouseY;
 	float angle_velocity = XM_PIDIV2;
 };

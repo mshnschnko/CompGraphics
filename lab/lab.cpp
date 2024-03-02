@@ -117,13 +117,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         Renderer::GetInstance().MouseRBPressed(true, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
 
+    case WM_LBUTTONDOWN:
+        Renderer::GetInstance().MouseRBPressed(true, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        break;
+
     case WM_RBUTTONUP:
         Renderer::GetInstance().MouseRBPressed(false, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        break;
 
+    case WM_LBUTTONUP:
+        Renderer::GetInstance().MouseRBPressed(false, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
 
     case WM_MOUSEMOVE:
-        Renderer::GetInstance().HandleInput(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        Renderer::GetInstance().MouseMoved(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
 
     case WM_MOUSEWHEEL:
