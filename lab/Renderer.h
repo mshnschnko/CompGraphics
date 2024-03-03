@@ -52,8 +52,6 @@ private:
 
 	void Resize(UINT screenWidth, UINT screenHeight);
 
-	HRESULT CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut);
-
 	Renderer() = default;
 
 	D3D_DRIVER_TYPE         g_driverType = D3D_DRIVER_TYPE_NULL;
