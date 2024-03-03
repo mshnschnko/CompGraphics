@@ -7,34 +7,6 @@ Renderer& Renderer::GetInstance() {
     return rendererInstance;
 }
 
-HRESULT Renderer::CompileShaderFromFile(const WCHAR* szFileName, LPCSTR szEntryPoint, LPCSTR szShaderModel, ID3DBlob** ppBlobOut)
-{
-    HRESULT hr = S_OK;
-
-    DWORD dwShaderFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-
-#ifdef _DEBUG
-    dwShaderFlags |= D3DCOMPILE_DEBUG;
-    dwShaderFlags |= D3DCOMPILE_SKIP_OPTIMIZATION;
-#endif
-
-    ID3DBlob* pErrorBlob = nullptr;
-    hr = D3DCompileFromFile(szFileName, nullptr, nullptr, szEntryPoint, szShaderModel,
-        dwShaderFlags, 0, ppBlobOut, &pErrorBlob);
-    if (FAILED(hr))
-    {
-        if (pErrorBlob)
-        {
-            OutputDebugStringA(reinterpret_cast<const char*>(pErrorBlob->GetBufferPointer()));
-            pErrorBlob->Release();
-        }
-        return hr;
-    }
-    if (pErrorBlob) pErrorBlob->Release();
-
-    return S_OK;
-}
-
 HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
     HRESULT hr = S_OK;
 
@@ -198,7 +170,7 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
     D3D11_INPUT_ELEMENT_DESC layout[] =
     {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
     };
     UINT numElements = ARRAYSIZE(layout);
 
@@ -226,35 +198,47 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
 
     init_time = clock();
 
+    hr = texture.InitEx(g_pd3dDevice, g_pImmediateContext, L"./shrek1.dds");
+
     SimpleVertex vertices[] = {
-         { -1.0f, 1.0f, -1.0f, RGB(0, 0, 255) },
-         { 1.0f, 1.0f, -1.0f, RGB(0, 255, 0) },
-         { 1.0f, 1.0f, 1.0f, RGB(0, 255, 255) },
-         { -1.0f, 1.0f, 1.0f, RGB(255, 0, 0) },
-         { -1.0f, -1.0f, -1.0f, RGB(255, 0, 255) },
-         { 1.0f, -1.0f, -1.0f, RGB(255, 255, 0) },
-         { 1.0f, -1.0f, 1.0f, RGB(255, 255, 255) },
-         { -1.0f, -1.0f, 1.0f, RGB(0, 0, 0) }
+        {-0.5, -0.5,  0.5, 0, 1},
+        { 0.5, -0.5,  0.5, 1, 1},
+        { 0.5, -0.5, -0.5, 1, 0},
+        {-0.5, -0.5, -0.5, 0, 0},
+
+        {-0.5,  0.5, -0.5, 1, 1},
+        { 0.5,  0.5, -0.5, 0, 1},
+        { 0.5,  0.5,  0.5, 0, 0},
+        {-0.5,  0.5,  0.5, 1, 0},
+
+        { 0.5, -0.5, -0.5, 0, 1},
+        { 0.5, -0.5,  0.5, 1, 1},
+        { 0.5,  0.5,  0.5, 1, 0},
+        { 0.5,  0.5, -0.5, 0, 0},
+
+        {-0.5, -0.5,  0.5, 0, 1},
+        {-0.5, -0.5, -0.5, 1, 1},
+        {-0.5,  0.5, -0.5, 1, 0},
+        {-0.5,  0.5,  0.5, 0, 0},
+
+        { 0.5, -0.5,  0.5, 1, 1},
+        {-0.5, -0.5,  0.5, 0, 1},
+        {-0.5,  0.5,  0.5, 0, 0},
+        { 0.5,  0.5,  0.5, 1, 0},
+
+        {-0.5, -0.5, -0.5, 1, 1},
+        { 0.5, -0.5, -0.5, 0, 1},
+        { 0.5,  0.5, -0.5, 0, 0},
+        {-0.5,  0.5, -0.5, 1, 0}
     };
 
     USHORT indices[] = {
-          3,1,0,
-          2,1,3,
-
-          0,5,4,
-          1,5,0,
-
-          3,4,7,
-          0,4,3,
-
-          1,6,5,
-          2,6,1,
-
-          2,7,6,
-          3,7,2,
-
-          6,4,5,
-          7,4,6,
+          0, 2, 1, 0, 3, 2,
+          4, 6, 5, 4, 7, 6,
+          8, 10, 9, 8, 11, 10,
+          12, 14, 13, 12, 15, 14,
+          16, 18, 17, 16, 19, 18,
+          20, 22, 21, 20, 23, 22
     };
 
     D3D11_BUFFER_DESC bd;
@@ -343,15 +327,38 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
     if (FAILED(hr))
         return hr;
 
+    D3D11_SAMPLER_DESC descSmplr = {};
+    descSmplr.Filter = D3D11_FILTER_ANISOTROPIC;
+    descSmplr.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    descSmplr.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    descSmplr.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
+    descSmplr.MinLOD = -D3D11_FLOAT32_MAX;
+    descSmplr.MaxLOD = D3D11_FLOAT32_MAX;
+    descSmplr.MipLODBias = 0.0f;
+    descSmplr.MaxAnisotropy = 16;
+    descSmplr.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    descSmplr.BorderColor[0] =
+        descSmplr.BorderColor[1] =
+        descSmplr.BorderColor[2] =
+        descSmplr.BorderColor[3] = 1.0f;
+
+    hr = g_pd3dDevice->CreateSamplerState(&descSmplr, &g_pSamplerState);
+    if (FAILED(hr))
+        return hr;
+
+    skybox.Init(g_pd3dDevice, g_pImmediateContext, width, height);
+
     return S_OK;
 }
 
 HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT screenWidth, UINT screenHeight) {
-    HRESULT hr = input.InitInputs(g_hInstance, g_hWnd, screenWidth, screenHeight);
-    if (FAILED(hr))
-        return hr;
+    Resize(screenWidth, screenHeight);
 
-    hr = camera.Init();
+    m_rbPressed = false;
+    m_prevMouseX = 0;
+    m_prevMouseY = 0;
+
+    HRESULT hr = camera.Init();
     if (FAILED(hr))
         return hr;
 
@@ -362,15 +369,31 @@ HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT sc
     return S_OK;
 }
 
-void Renderer::HandleInput() {
-    XMFLOAT3 mouseMove = input.GetMouseInputs();
-    camera.Move(mouseMove.x, mouseMove.y, mouseMove.z);
+void Renderer::MouseMoved(int x, int y) {
+    if (m_rbPressed) {
+        float dx = (float)(x - m_prevMouseX) * angle_velocity;
+        float dy = (float)(y - m_prevMouseY) * angle_velocity;
+
+        m_prevMouseX = x;
+        m_prevMouseY = y;
+        camera.Move(dx, dy);
+    }
+}
+
+void Renderer::MouseRBPressed(bool pressed, int x, int y) {
+    m_rbPressed = pressed;
+
+    if (m_rbPressed) {
+        m_prevMouseX = x;
+        m_prevMouseY = y;
+    }
+}
+
+void Renderer::MouseWheel(int wheel) {
+    camera.UpdateDistance(wheel);
 }
 
 bool Renderer::Frame() {
-    input.ReadMouse();
-
-    HandleInput();
     camera.Frame();
 
     auto duration = (1.0 * clock() - init_time) / CLOCKS_PER_SEC;
@@ -384,7 +407,7 @@ bool Renderer::Frame() {
     XMMATRIX mView;
     camera.GetBaseViewMatrix(mView);
 
-    XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)input.GetWidth() / (FLOAT)input.GetHeight(), 0.01f, 100.0f);
+    XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)m_width / (FLOAT)m_height, 0.01f, 100.0f);
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT hr = g_pImmediateContext->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
@@ -394,6 +417,7 @@ bool Renderer::Frame() {
     SceneMatrixBuffer& sceneBuffer = *reinterpret_cast<SceneMatrixBuffer*>(subresource.pData);
     sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(mView, mProjection);
     g_pImmediateContext->Unmap(g_pSceneMatrixBuffer, 0);
+    skybox.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos());
 
     return SUCCEEDED(hr);
 }
@@ -411,8 +435,8 @@ void Renderer::Render() {
     D3D11_VIEWPORT viewport;
     viewport.TopLeftX = 0;
     viewport.TopLeftY = 0;
-    viewport.Width = (FLOAT)input.GetWidth();
-    viewport.Height = (FLOAT)input.GetHeight();
+    viewport.Width = (FLOAT)m_width;
+    viewport.Height = (FLOAT)m_height;
     viewport.MinDepth = 0.0f;
     viewport.MaxDepth = 1.0f;
     g_pImmediateContext->RSSetViewports(1, &viewport);
@@ -420,15 +444,23 @@ void Renderer::Render() {
     D3D11_RECT rect;
     rect.left = 0;
     rect.top = 0;
-    rect.right = input.GetWidth();
-    rect.bottom = input.GetHeight();
+    rect.right = m_width;
+    rect.bottom = m_height;
     g_pImmediateContext->RSSetScissorRects(1, &rect);
+
+    skybox.Render(g_pImmediateContext);
 
     g_pImmediateContext->RSSetState(g_pRasterizerState);
 
+    ID3D11SamplerState* samplers[] = { g_pSamplerState };
+    g_pImmediateContext->PSSetSamplers(0, 1, samplers);
+
+    ID3D11ShaderResourceView* resources[] = { texture.GetTexture() };
+    g_pImmediateContext->PSSetShaderResources(0, 1, resources);
+
     g_pImmediateContext->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
     ID3D11Buffer* vertexBuffers[] = { g_pVertexBuffer };
-    UINT strides[] = { 16 };
+    UINT strides[] = { 20 };
     UINT offsets[] = { 0 };
     g_pImmediateContext->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
     g_pImmediateContext->IASetInputLayout(g_pVertexLayout);
@@ -442,11 +474,18 @@ void Renderer::Render() {
     g_pSwapChain->Present(0, 0);
 }
 
+void Renderer::Resize(UINT screenWidth, UINT screenHeight) {
+    m_width = screenWidth;
+    m_height = screenHeight;
+}
+
 void Renderer::CleanupDevice() {
     camera.Realese();
-    input.Realese();
+    texture.Release();
+    skybox.Realese();
     if (g_pImmediateContext) g_pImmediateContext->ClearState();
 
+    if (g_pSamplerState) g_pSamplerState->Release();
     if (g_pRasterizerState) g_pRasterizerState->Release();
     if (g_pWorldMatrixBuffer) g_pWorldMatrixBuffer->Release();
     if (g_pSceneMatrixBuffer) g_pSceneMatrixBuffer->Release();
@@ -499,6 +538,7 @@ void Renderer::ResizeWindow(const HWND& g_hWnd) {
         vp.TopLeftY = 0;
         g_pImmediateContext->RSSetViewports(1, &vp);
 
-        input.Resize(width, height);
+        Resize(width, height);
+        skybox.Resize(width, height);
     }
 }

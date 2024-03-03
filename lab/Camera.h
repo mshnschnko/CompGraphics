@@ -17,7 +17,11 @@ public:
 
 	void GetBaseViewMatrix(XMMATRIX& viewMatrix);
 
-	void Move(float dx, float dy, float wheel);
+	XMFLOAT3 GetPos();
+
+	void Move(float dx, float dy);
+
+	void UpdateDistance(float wheel);
 
 private:
 	XMMATRIX viewMatrix;

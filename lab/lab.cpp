@@ -1,5 +1,7 @@
 ﻿#include <windows.h>
+#include <windowsx.h>
 #include <xstring>
+#include <mmsystem.h>
 
 #include "Resource.h"
 #include "framework.h"
@@ -109,6 +111,30 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_SIZE:
         Renderer::GetInstance().ResizeWindow(g_hWnd);
+        break;
+
+    case WM_RBUTTONDOWN:
+        Renderer::GetInstance().MouseRBPressed(true, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        break;
+
+    case WM_LBUTTONDOWN:
+        Renderer::GetInstance().MouseRBPressed(true, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        break;
+
+    case WM_RBUTTONUP:
+        Renderer::GetInstance().MouseRBPressed(false, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        break;
+
+    case WM_LBUTTONUP:
+        Renderer::GetInstance().MouseRBPressed(false, GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        break;
+
+    case WM_MOUSEMOVE:
+        Renderer::GetInstance().MouseMoved(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        break;
+
+    case WM_MOUSEWHEEL:
+        Renderer::GetInstance().MouseWheel(GET_WHEEL_DELTA_WPARAM(wParam));
         break;
 
     default:
