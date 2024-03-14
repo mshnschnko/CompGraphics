@@ -30,6 +30,7 @@ PS_INPUT main(VS_INPUT input)
     viewProjectionMatrix,
     mul(worldMatrix, float4(pos, 1.0f)));
     output.localPos = input.position;
+    output.position.z = 0.0f;
 
     return output;
 }
