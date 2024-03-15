@@ -38,9 +38,9 @@ bool Scene::FrameCubes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATR
 
     worldMatricies[0] = XMMatrixRotationY((float)duration * angle_velocity);
     worldMatricies[1] = XMMatrixRotationY((float)duration * angle_velocity * 0.25f) * XMMatrixTranslation((float)sin(duration) * 3.0f, 0.0f, (float)cos(duration) * 3.0f);
-    cubes.Frame(context, worldMatricies, viewMatrix, projectionMatrix, cameraPos);
+    bool failed = cubes.Frame(context, worldMatricies, viewMatrix, projectionMatrix, cameraPos);
 
-    return S_OK;
+    return failed;
 }
 
 bool Scene::FramePlanes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
@@ -51,17 +51,23 @@ bool Scene::FramePlanes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMAT
     worldMatricies[1] = XMMatrixTranslation(-1.25f, (float)(sin(duration * 2) * 2.0), (float)(sin(duration * 2) * -2.0));
     worldMatricies[2] = XMMatrixTranslation(1.5f, (float)(sin(duration * 2) * 2.0), (float)(sin(duration * 2) * 2.0));
 
-    planes.Frame(context, worldMatricies, viewMatrix, projectionMatrix, cameraPos);
+    bool failed = planes.Frame(context, worldMatricies, viewMatrix, projectionMatrix, cameraPos);
 
-    return S_OK;
+    return failed;
 }
 
 bool Scene::Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
-    FrameCubes(context, viewMatrix, projectionMatrix, cameraPos);
-    FramePlanes(context, viewMatrix, projectionMatrix, cameraPos);
-    skybox.Frame(context, viewMatrix, projectionMatrix, cameraPos);
+    bool failed = FrameCubes(context, viewMatrix, projectionMatrix, cameraPos);
+    if (failed)
+        return false;
 
-    return true;
+    failed = FramePlanes(context, viewMatrix, projectionMatrix, cameraPos);
+    if (failed)
+        return false;
+
+    failed = skybox.Frame(context, viewMatrix, projectionMatrix, cameraPos);
+
+    return failed;
 }
 
 void Scene::Resize(int screenWidth, int screenHeight) {
