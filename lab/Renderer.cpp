@@ -226,7 +226,7 @@ void Renderer::MouseRBPressed(bool pressed, int x, int y) {
 }
 
 void Renderer::MouseWheel(int wheel) {
-    camera.UpdateDistance(wheel);
+    camera.UpdateDistance((float)wheel);
 }
 
 bool Renderer::Frame() {
@@ -282,7 +282,8 @@ void Renderer::Resize(UINT screenWidth, UINT screenHeight) {
 }
 
 void Renderer::CleanupDevice() {
-    camera.Realese();
+    camera.Release();
+    scene.Release();
     if (g_pImmediateContext) g_pImmediateContext->ClearState();
 
     if (g_pRenderTargetView) g_pRenderTargetView->Release();
