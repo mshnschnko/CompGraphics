@@ -168,7 +168,7 @@ HRESULT Plane::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scre
     return S_OK;
 }
 
-void Plane::Realese() {
+void Plane::Release() {
     if (g_pTransBlendState) g_pTransBlendState->Release();
     if (g_pRasterizerState) g_pRasterizerState->Release();
 

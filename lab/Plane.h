@@ -22,7 +22,7 @@ class Plane {
 public:
     HRESULT Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight, UINT cnt, const std::vector<XMFLOAT4> colors);
 
-    void Realese();
+    void Release();
 
     void Resize(int screenWidth, int screenHeight) {};
 

@@ -20,10 +20,10 @@ HRESULT Scene::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scre
     return hr;
 }
 
-void Scene::Realese() {
-    cubes.Realese();
-    planes.Realese();
-    skybox.Realese();
+void Scene::Release() {
+    cubes.Release();
+    planes.Release();
+    skybox.Release();
 }
 
 void Scene::Render(ID3D11DeviceContext* context) {
