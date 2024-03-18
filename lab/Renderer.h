@@ -9,22 +9,9 @@
 
 #include "Camera.h"
 #include "texture.h"
+#include "scene.h"
 #include "skybox.h"
 
-
-struct SimpleVertex
-{
-	float x, y, z;
-	float u, v;
-};
-
-struct WorldMatrixBuffer {
-	XMMATRIX worldMatrix;
-};
-
-struct SceneMatrixBuffer {
-	XMMATRIX viewProjectionMatrix;
-};
 
 class Renderer {
 public:
@@ -49,6 +36,7 @@ public:
 	void MouseWheel(int wheel);
 private:
 	HRESULT InitDevice(const HWND& g_hWnd);
+	HRESULT InitBackBuffer();
 
 	void Resize(UINT screenWidth, UINT screenHeight);
 
@@ -63,22 +51,11 @@ private:
 	IDXGISwapChain* g_pSwapChain = nullptr;
 	IDXGISwapChain1* g_pSwapChain1 = nullptr;
 	ID3D11RenderTargetView* g_pRenderTargetView = nullptr;
+	ID3D11Texture2D* g_pDepthBuffer = nullptr;
+	ID3D11DepthStencilView* g_pDepthBufferDSV = nullptr;
 
-	ID3D11VertexShader* g_pVertexShader = nullptr;
-	ID3D11PixelShader* g_pPixelShader = nullptr;
-	ID3D11InputLayout* g_pVertexLayout = nullptr;
-
-	ID3D11Buffer* g_pVertexBuffer = nullptr;
-	ID3D11Buffer* g_pIndexBuffer = nullptr;
-	ID3D11Buffer* g_pWorldMatrixBuffer = nullptr;
-	ID3D11Buffer* g_pSceneMatrixBuffer = nullptr;
-	ID3D11RasterizerState* g_pRasterizerState = nullptr;
-	ID3D11SamplerState* g_pSamplerState = nullptr;
-
-	std::clock_t init_time;
 	Camera camera;
-	Skybox skybox;
-	Texture texture;
+	Scene scene;
 
 	UINT m_width;
 	UINT m_height;

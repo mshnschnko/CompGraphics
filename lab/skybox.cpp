@@ -230,7 +230,7 @@ HRESULT Skybox::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scr
     return hr;
 }
 
-void Skybox::Realese() {
+void Skybox::Release() {
     texture.Release();
 
     if (g_pSamplerState) g_pSamplerState->Release();

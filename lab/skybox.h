@@ -30,7 +30,7 @@ class Skybox {
 public:
 	HRESULT Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight);
 
-	void Realese();
+	void Release();
 
 	void Resize(int screenWidth, int screenHeight);
 
