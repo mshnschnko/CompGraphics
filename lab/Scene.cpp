@@ -36,9 +36,9 @@ void Scene::Release() {
 void Scene::Render(ID3D11DeviceContext* context) {
     cubes.Render(context);
     skybox.Render(context);
-    planes.Render(context);
     for (auto& light : lights)
         light.Render(context);
+    planes.Render(context);
 }
 
 bool Scene::FrameCubes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
