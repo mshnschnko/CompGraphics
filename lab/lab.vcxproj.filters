@@ -42,6 +42,24 @@
     <ClInclude Include="skybox.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="Cube.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="structures.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="Plane.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="timer.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="Light.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lab.cpp">
@@ -60,6 +78,18 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="skybox.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="Cube.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="Plane.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="Light.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>
@@ -81,5 +111,13 @@
     <FxCompile Include="VertexShader.hlsl" />
     <FxCompile Include="SkyboxPixelShader.hlsl" />
     <FxCompile Include="SkyboxVertexShader.hlsl" />
+    <FxCompile Include="TransparentPixelShader.hlsl" />
+    <FxCompile Include="TransparentVertexShader.hlsl" />
+    <FxCompile Include="LightPixelShader.hlsl" />
+    <FxCompile Include="LightVertexShader.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="SceneCB.hlsli" />
+    <None Include="CalculateColor.hlsli" />
   </ItemGroup>
 </Project>

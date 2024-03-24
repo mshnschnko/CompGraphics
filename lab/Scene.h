@@ -12,6 +12,7 @@
 #include "Plane.h"
 #include "timer.h"
 #include "texture.h"
+#include "Light.h"
 
 using namespace DirectX;
 
@@ -34,6 +35,7 @@ private:
     Cube cubes;
     Plane planes;
     Skybox skybox;
+    std::vector<Light> lights;
 
     float angle_velocity = XM_PIDIV2;
 };

@@ -1,6 +1,7 @@
 #include "Cube.h"
 
-HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight, UINT cnt) {
+HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth,
+    int screenHeight, UINT cnt, const wchar_t* diffPath, const wchar_t* normalPath, float shines) {
     ID3DBlob* pVSBlob = nullptr;
     HRESULT hr = D3DReadFileToBlob(L"VertexShader.cso", &pVSBlob);
     if (FAILED(hr)) {
@@ -17,7 +18,9 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
 
     D3D11_INPUT_ELEMENT_DESC layout[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0}
+        {"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0},
     };
     UINT numElements = ARRAYSIZE(layout);
 
@@ -42,38 +45,46 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     if (FAILED(hr))
         return hr;
 
-    hr = texture.Init(device, context, L"./shrek1.dds");
+    //hr = texture.Init(device, context, L"./shrek1.dds");
+    this->shines = shines;
+    hr = diffuse.Init(device, context, diffPath);
+    if (FAILED(hr))
+        return hr;
+
+    hr = normal.Init(device, context, normalPath);
+    if (FAILED(hr))
+        return hr;
 
     TexVertex vertices[] = {
-      {-0.5, -0.5,  0.5, 0, 1},
-      { 0.5, -0.5,  0.5, 1, 1},
-      { 0.5, -0.5, -0.5, 1, 0},
-      {-0.5, -0.5, -0.5, 0, 0},
+        {{-0.5, -0.5,  0.5}, {0, 1}, {0, -1, 0}, {1, 0, 0}},
+        {{ 0.5, -0.5,  0.5}, {1, 1}, {0, -1, 0}, {1, 0, 0}},
+        {{ 0.5, -0.5, -0.5}, {1, 0}, {0, -1, 0}, {1, 0, 0}},
+        {{-0.5, -0.5, -0.5}, {0, 0}, {0, -1, 0}, {1, 0, 0}},
 
-      {-0.5,  0.5, -0.5, 1, 1},
-      { 0.5,  0.5, -0.5, 0, 1},
-      { 0.5,  0.5,  0.5, 0, 0},
-      {-0.5,  0.5,  0.5, 1, 0},
+        {{-0.5,  0.5, -0.5}, {1, 1}, {0, 1, 0}, {1, 0, 0}},
+        {{ 0.5,  0.5, -0.5}, {0, 1}, {0, 1, 0}, {1, 0, 0}},
+        {{ 0.5,  0.5,  0.5}, {0, 0}, {0, 1, 0}, {1, 0, 0}},
+        {{-0.5,  0.5,  0.5}, {1, 0}, {0, 1, 0}, {1, 0, 0}},
 
-      { 0.5, -0.5, -0.5, 0, 1},
-      { 0.5, -0.5,  0.5, 1, 1},
-      { 0.5,  0.5,  0.5, 1, 0},
-      { 0.5,  0.5, -0.5, 0, 0},
+        {{ 0.5, -0.5, -0.5}, {0, 1}, {1, 0, 0}, {0, 0, 1}},
+        {{ 0.5, -0.5,  0.5}, {1, 1}, {1, 0, 0}, {0, 0, 1}},
+        {{ 0.5,  0.5,  0.5}, {1, 0}, {1, 0, 0}, {0, 0, 1}},
+        {{ 0.5,  0.5, -0.5}, {0, 0}, {1, 0, 0}, {0, 0, 1}},
 
-      {-0.5, -0.5,  0.5, 0, 1},
-      {-0.5, -0.5, -0.5, 1, 1},
-      {-0.5,  0.5, -0.5, 1, 0},
-      {-0.5,  0.5,  0.5, 0, 0},
+        {{-0.5, -0.5,  0.5}, {0, 1}, {-1, 0, 0}, {0, 0, -1}},
+        {{-0.5, -0.5, -0.5}, {1, 1}, {-1, 0, 0}, {0, 0, -1}},
+        {{-0.5,  0.5, -0.5}, {1, 0}, {-1, 0, 0}, {0, 0, -1}},
+        {{-0.5,  0.5,  0.5}, {0, 0}, {-1, 0, 0}, {0, 0, -1}},
 
-      { 0.5, -0.5,  0.5, 1, 1},
-      {-0.5, -0.5,  0.5, 0, 1},
-      {-0.5,  0.5,  0.5, 0, 0},
-      { 0.5,  0.5,  0.5, 1, 0},
+        {{ 0.5, -0.5,  0.5}, {1, 1}, {0, 0, 1}, {-1, 0, 0}},
+        {{-0.5, -0.5,  0.5}, {0, 1}, {0, 0, 1}, {-1, 0, 0}},
+        {{-0.5,  0.5,  0.5}, {0, 0}, {0, 0, 1}, {-1, 0, 0}},
+        {{ 0.5,  0.5,  0.5}, {1, 0}, {0, 0, 1}, {-1, 0, 0}},
 
-      {-0.5, -0.5, -0.5, 1, 1},
-      { 0.5, -0.5, -0.5, 0, 1},
-      { 0.5,  0.5, -0.5, 0, 0},
-      {-0.5,  0.5, -0.5, 1, 0}
+        {{-0.5, -0.5, -0.5}, {1, 1}, {0, 0, -1}, {1, 0, 0}},
+        {{ 0.5, -0.5, -0.5}, {0, 1}, {0, 0, -1}, {1, 0, 0}},
+        {{ 0.5,  0.5, -0.5}, {0, 0}, {0, 0, -1}, {1, 0, 0}},
+        {{-0.5,  0.5, -0.5}, {1, 0}, {0, 0, -1}, {1, 0, 0}}
     };
 
     USHORT indices[] = {
@@ -147,7 +158,7 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     }
 
     D3D11_BUFFER_DESC descSMB = {};
-    descSMB.ByteWidth = sizeof(SceneMatrixBuffer);
+    descSMB.ByteWidth = sizeof(LightableSceneMatrixBuffer);
     descSMB.Usage = D3D11_USAGE_DYNAMIC;
     descSMB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     descSMB.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -209,11 +220,13 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
 
 
 void Cube::Release() {
-    texture.Release();
+    diffuse.Release();
+    normal.Release();
 
     if (g_pSamplerState) g_pSamplerState->Release();
     if (g_pRasterizerState) g_pRasterizerState->Release();
 
+    //if (g_pWorldMatrixBuffer) g_pWorldMatrixBuffer->Release();
     for (auto& buffer : g_pWorldMatrixBuffers)
         if (buffer)
             buffer->Release();
@@ -235,10 +248,17 @@ void Cube::Render(ID3D11DeviceContext* context) {
     ID3D11SamplerState* samplers[] = { g_pSamplerState };
     context->PSSetSamplers(0, 1, samplers);
 
-    ID3D11ShaderResourceView* resources[] = { texture.GetTexture() };
-    context->PSSetShaderResources(0, 1, resources);
+    //ID3D11ShaderResourceView* resources[] = { texture.GetTexture() };
+    //context->PSSetShaderResources(0, 1, resources);
+
+    ID3D11ShaderResourceView* resources[] = {
+        diffuse.GetTexture(),
+        normal.GetTexture()
+    };
+    context->PSSetShaderResources(0, 2, resources);
+
     ID3D11Buffer* vertexBuffers[] = { g_pVertexBuffer };
-    UINT strides[] = { 20 };
+    UINT strides[] = { sizeof(TexVertex)};
     UINT offsets[] = { 0 };
 
     context->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
@@ -247,28 +267,42 @@ void Cube::Render(ID3D11DeviceContext* context) {
     context->VSSetShader(g_pVertexShader, nullptr, 0);
     context->VSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
     context->PSSetShader(g_pPixelShader, nullptr, 0);
+    context->PSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
 
     for (auto& buffer : g_pWorldMatrixBuffers) {
+        context->PSSetConstantBuffers(0, 1, &buffer);
         context->VSSetConstantBuffers(0, 1, &buffer);
         context->DrawIndexed(36, 0, 0);
     }
 }
 
 
-bool Cube::Frame(ID3D11DeviceContext* context, const std::vector<XMMATRIX>& worldMatricies, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
+bool Cube::Frame(ID3D11DeviceContext* context, const std::vector<XMMATRIX>& worldMatricies, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix, XMFLOAT3& cameraPos, std::vector<Light>& lights) {
     WorldMatrixBuffer worldMatrixBuffer;
     for (int i = 0; i < worldMatricies.size() && i < g_pWorldMatrixBuffers.size(); i++) {
         worldMatrixBuffer.worldMatrix = worldMatricies[i];
+        worldMatrixBuffer.color = XMFLOAT4(shines, 0.0f, 0.0f, 0.0f);
         context->UpdateSubresource(g_pWorldMatrixBuffers[i], 0, nullptr, &worldMatrixBuffer, 0, 0);
     }
+    //worldMatrixBuffer.worldMatrix = worldMatrix;
+    //worldMatrixBuffer.color = XMFLOAT4(1,1,1,1);
+    //context->UpdateSubresource(g_pWorldMatrixBuffer, 0, nullptr, &worldMatrixBuffer, 0, 0);
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
     if (FAILED(hr))
         return FAILED(hr);
 
-    SceneMatrixBuffer& sceneBuffer = *reinterpret_cast<SceneMatrixBuffer*>(subresource.pData);
+    LightableSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<LightableSceneMatrixBuffer*>(subresource.pData);
     sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
+    sceneBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
+    sceneBuffer.ambientColor = XMFLOAT4(0.6f, 0.6f, 0.3f, 1.0f);
+    sceneBuffer.lightCount = XMINT4((int32_t)lights.size(), 0, 0, 0);
+    for (int i = 0; i < lights.size(); i++) {
+        sceneBuffer.lightPos[i] = lights[i].GetPosition();
+        sceneBuffer.lightColor[i] = lights[i].GetColor();
+    }
+
     context->Unmap(g_pSceneMatrixBuffer, 0);
 
     return S_OK;

@@ -9,12 +9,14 @@
 
 #include "texture.h"
 #include "structures.h"
+#include "Light.h"
 
 using namespace DirectX;
 
 class Cube {
 public:
-	HRESULT Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight, UINT count);
+	HRESULT Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth,
+		int screenHeight, UINT count, const wchar_t* diffPath, const wchar_t* normalPath, float shines);
 
 	void Release();
 
@@ -22,7 +24,7 @@ public:
 
 	void Render(ID3D11DeviceContext* context);
 
-	bool Frame(ID3D11DeviceContext* context, const std::vector<XMMATRIX>& worldMatricies, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos);
+	bool Frame(ID3D11DeviceContext* context, const std::vector<XMMATRIX>& worldMatricies, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix, XMFLOAT3& cameraPos, std::vector<Light>& lights);
 
 private:
 	ID3D11VertexShader* g_pVertexShader = nullptr;
@@ -35,8 +37,10 @@ private:
 	ID3D11RasterizerState* g_pRasterizerState = nullptr;
 	ID3D11SamplerState* g_pSamplerState = nullptr;
 	ID3D11DepthStencilState* g_pDepthState = nullptr;
-
 	std::vector<ID3D11Buffer*> g_pWorldMatrixBuffers = std::vector<ID3D11Buffer*>(1, nullptr);
 
-	Texture texture;
+	//std::vector<ID3D11Buffer*> g_pWorldMatrixBuffers = std::vector<ID3D11Buffer*>(1, nullptr);
+
+	Texture diffuse, normal;
+	float shines;
 };

@@ -1,21 +1,26 @@
 #include "Scene.h"
 
 HRESULT Scene::Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight) {
-    std::vector<XMFLOAT4> colors = {
-      XMFLOAT4(1.f, 0.f, 0.f, 1.f),
-      XMFLOAT4(0.f, 1.f, 0.f, 1.f),
-      XMFLOAT4(0.f, 0.f, 1.f, 1.f),
-    };
-
-    HRESULT hr = cubes.Init(device, context, screenWidth, screenHeight, 2);
+    HRESULT hr = cubes.Init(device, context, screenWidth, screenHeight, 2, L"./196.dds", L"./196_norm.dds", 64.f);
     if (FAILED(hr))
         return hr;
+
+    std::vector<XMFLOAT4> colors = {
+      XMFLOAT4(1.f, 0.f, 0.f, 0.5f),
+      XMFLOAT4(0.f, 1.f, 0.f, 0.5f),
+      XMFLOAT4(0.f, 0.f, 1.f, 0.5f),
+    };
 
     hr = planes.Init(device, context, screenWidth, screenHeight, 3, colors);
     if (FAILED(hr))
         return hr;
 
     hr = skybox.Init(device, context, screenWidth, screenHeight);
+
+    lights = std::vector<Light>(3);
+    hr = lights[0].Init(device, context, screenWidth, screenHeight, XMFLOAT4(1.f, 1.f, 1.0f, 1.f), XMFLOAT4(-1.f, 0.f, 0.f, 1.f));
+    hr = lights[1].Init(device, context, screenWidth, screenHeight, XMFLOAT4(1.f, 1.f, 1.0f, 1.f), XMFLOAT4(0.f, -1.f, 0.f, 1.f));
+    hr = lights[2].Init(device, context, screenWidth, screenHeight, XMFLOAT4(1.f, 1.f, 0.0f, 1.f), XMFLOAT4(1.f, 0.f, 0.f, 1.f));
 
     return hr;
 }
@@ -24,12 +29,16 @@ void Scene::Release() {
     cubes.Release();
     planes.Release();
     skybox.Release();
+    for (auto& light : lights)
+        light.Realese();
 }
 
 void Scene::Render(ID3D11DeviceContext* context) {
     cubes.Render(context);
     skybox.Render(context);
     planes.Render(context);
+    for (auto& light : lights)
+        light.Render(context);
 }
 
 bool Scene::FrameCubes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
@@ -38,7 +47,7 @@ bool Scene::FrameCubes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATR
 
     worldMatricies[0] = XMMatrixRotationY((float)duration * angle_velocity);
     worldMatricies[1] = XMMatrixRotationY((float)duration * angle_velocity * 0.25f) * XMMatrixTranslation((float)sin(duration) * 3.0f, 0.0f, (float)cos(duration) * 3.0f);
-    bool failed = cubes.Frame(context, worldMatricies, viewMatrix, projectionMatrix, cameraPos);
+    bool failed = cubes.Frame(context, worldMatricies, viewMatrix, projectionMatrix, cameraPos, lights);
 
     return failed;
 }
@@ -51,7 +60,7 @@ bool Scene::FramePlanes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMAT
     worldMatricies[1] = XMMatrixTranslation(-1.25f, (float)(sin(duration * 2) * 2.0), (float)(sin(duration * 2) * -2.0));
     worldMatricies[2] = XMMatrixTranslation(1.5f, (float)(sin(duration * 2) * 2.0), (float)(sin(duration * 2) * 2.0));
 
-    bool failed = planes.Frame(context, worldMatricies, viewMatrix, projectionMatrix, cameraPos);
+    bool failed = planes.Frame(context, worldMatricies, viewMatrix, projectionMatrix, cameraPos, lights);
 
     return failed;
 }
@@ -67,6 +76,9 @@ bool Scene::Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX pr
 
     failed = skybox.Frame(context, viewMatrix, projectionMatrix, cameraPos);
 
+    for (auto& light : lights)
+        light.Frame(context, viewMatrix, projectionMatrix, cameraPos);
+
     return failed;
 }
 
@@ -74,4 +86,6 @@ void Scene::Resize(int screenWidth, int screenHeight) {
     cubes.Resize(screenWidth, screenHeight);
     planes.Resize(screenWidth, screenHeight);
     skybox.Resize(screenWidth, screenHeight);
+    for (auto& light : lights)
+        light.Resize(screenWidth, screenHeight);
 };

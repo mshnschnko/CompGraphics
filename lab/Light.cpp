@@ -1,6 +1,6 @@
-#include "skybox.h"
+#include "Light.h"
 
-void Skybox::GenerateSphere(UINT LatLines, UINT LongLines, std::vector<SimpleVertex>& vertices, std::vector<UINT>& indices) {
+void Light::GenerateSphere(UINT LatLines, UINT LongLines, std::vector<SimpleVertex>& vertices, std::vector<UINT>& indices) {
     numSphereVertices = ((LatLines - 2) * LongLines) + 2;
     numSphereFaces = ((LatLines - 3) * (LongLines) * 2) + (LongLines * 2);
 
@@ -86,10 +86,13 @@ void Skybox::GenerateSphere(UINT LatLines, UINT LongLines, std::vector<SimpleVer
     return;
 }
 
-HRESULT Skybox::Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight) {
+HRESULT Light::Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight, XMFLOAT4 color, XMFLOAT4 position) {
     std::vector<SimpleVertex> vertices;
     std::vector<UINT> indices;
-    GenerateSphere(30, 30, vertices, indices);
+    GenerateSphere(10, 10, vertices, indices);
+
+    this->color = color;
+    this->position = position;
 
     static const D3D11_INPUT_ELEMENT_DESC InputDesc[] = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
@@ -134,17 +137,23 @@ HRESULT Skybox::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scr
     flags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
 #endif
 
-    hr = D3DReadFileToBlob(L"SkyboxVertexShader.cso", &vertexShaderBuffer);
-    if (FAILED(hr))
+    hr = D3DReadFileToBlob(L"LightVertexShader.cso", &vertexShaderBuffer);
+    if (FAILED(hr)) {
+        MessageBox(nullptr,
+            L"LightVertexShader.cso not found.", L"Error", MB_OK);
         return hr;
+    }
 
     hr = device->CreateVertexShader(vertexShaderBuffer->GetBufferPointer(), vertexShaderBuffer->GetBufferSize(), NULL, &g_pVertexShader);
     if (FAILED(hr))
         return hr;
 
-    hr = D3DReadFileToBlob(L"SkyboxPixelShader.cso", &pixelShaderBuffer);
-    if (FAILED(hr))
+    hr = D3DReadFileToBlob(L"LightPixelShader.cso", &pixelShaderBuffer);
+    if (FAILED(hr)) {
+        MessageBox(nullptr,
+            L"LightPixelShader.cso not found.", L"Error", MB_OK);
         return hr;
+    }
 
     hr = device->CreatePixelShader(pixelShaderBuffer->GetBufferPointer(), pixelShaderBuffer->GetBufferSize(), NULL, &g_pPixelShader);
     if (FAILED(hr))
@@ -156,14 +165,14 @@ HRESULT Skybox::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scr
         return hr;
 
     D3D11_BUFFER_DESC descWM = {};
-    descWM.ByteWidth = sizeof(SBWorldMatrixBuffer);
+    descWM.ByteWidth = sizeof(WorldMatrixBuffer);
     descWM.Usage = D3D11_USAGE_DEFAULT;
     descWM.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     descWM.CPUAccessFlags = 0;
     descWM.MiscFlags = 0;
     descWM.StructureByteStride = 0;
 
-    SBWorldMatrixBuffer worldMatrixBuffer;
+    WorldMatrixBuffer worldMatrixBuffer;
     worldMatrixBuffer.worldMatrix = DirectX::XMMatrixIdentity();
 
     D3D11_SUBRESOURCE_DATA data;
@@ -176,7 +185,7 @@ HRESULT Skybox::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scr
         return hr;
 
     D3D11_BUFFER_DESC descSM = {};
-    descSM.ByteWidth = sizeof(SBSceneMatrixBuffer);
+    descSM.ByteWidth = sizeof(SceneMatrixBuffer);
     descSM.Usage = D3D11_USAGE_DYNAMIC;
     descSM.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     descSM.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -203,37 +212,12 @@ HRESULT Skybox::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scr
     if (FAILED(hr))
         return hr;
 
-    hr = texture.InitEx(device, context, L"./skybox1.dds");
-    if (FAILED(hr))
-        return hr;
-
-    D3D11_SAMPLER_DESC descSmplr = {};
-
-    descSmplr.Filter = D3D11_FILTER_ANISOTROPIC;
-    descSmplr.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
-    descSmplr.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
-    descSmplr.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
-    descSmplr.MinLOD = 0;
-    descSmplr.MaxLOD = D3D11_FLOAT32_MAX;
-    descSmplr.MipLODBias = 0.0f;
-    descSmplr.MaxAnisotropy = 16;
-    descSmplr.ComparisonFunc = D3D11_COMPARISON_NEVER;
-    descSmplr.BorderColor[0] =
-        descSmplr.BorderColor[1] =
-        descSmplr.BorderColor[2] =
-        descSmplr.BorderColor[3] = 0.0f;
-
-    hr = device->CreateSamplerState(&descSmplr, &g_pSamplerState);
-
     Resize(screenWidth, screenHeight);
 
     return hr;
 }
 
-void Skybox::Release() {
-    texture.Release();
-
-    if (g_pSamplerState) g_pSamplerState->Release();
+void Light::Realese() {
     if (g_pRasterizerState) g_pRasterizerState->Release();
     if (g_pWorldMatrixBuffer) g_pWorldMatrixBuffer->Release();
     if (g_pSceneMatrixBuffer) g_pSceneMatrixBuffer->Release();
@@ -244,23 +228,11 @@ void Skybox::Release() {
     if (g_pPixelShader) g_pPixelShader->Release();
 }
 
-void Skybox::Resize(int screenWidth, int screenHeight) {
-    float n = 0.1f;
-    float fov = XM_PI / 3;
-    float halfW = tanf(fov / 2) * n;
-    float halfH = float(screenHeight / screenWidth) * halfW;
-    radius = sqrtf(n * n + halfH * halfH + halfW * halfW) * 11.1f * 2.0f;
-}
-
-void Skybox::Render(ID3D11DeviceContext* context) {
+void Light::Render(ID3D11DeviceContext* context) {
     context->RSSetState(g_pRasterizerState);
 
     context->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R32_UINT, 0);
-    ID3D11SamplerState* samplers[] = { g_pSamplerState };
-    context->PSSetSamplers(0, 1, samplers);
 
-    ID3D11ShaderResourceView* resources[] = { texture.GetTexture() };
-    context->PSSetShaderResources(0, 1, resources);
     ID3D11Buffer* vertexBuffers[] = { g_pVertexBuffer };
     UINT strides[] = { 12 };
     UINT offsets[] = { 0 };
@@ -272,15 +244,16 @@ void Skybox::Render(ID3D11DeviceContext* context) {
     context->VSSetConstantBuffers(0, 1, &g_pWorldMatrixBuffer);
     context->VSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
     context->PSSetShader(g_pPixelShader, nullptr, 0);
+    context->PSSetConstantBuffers(0, 1, &g_pWorldMatrixBuffer);
 
     context->DrawIndexed(numSphereFaces * 3, 0, 0);
 }
 
-bool Skybox::Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
-    SBWorldMatrixBuffer worldMatrixBuffer;
+bool Light::Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
+    WorldMatrixBuffer worldMatrixBuffer;
 
-    worldMatrixBuffer.worldMatrix = XMMatrixIdentity();
-    worldMatrixBuffer.size = XMFLOAT4(radius, 0.0f, 0.0f, 0.0f);
+    worldMatrixBuffer.worldMatrix = XMMatrixScaling(0.1f, 0.1f, 0.1f) * XMMatrixTranslation(position.x, position.y, position.z);
+    worldMatrixBuffer.color = color;
 
     context->UpdateSubresource(g_pWorldMatrixBuffer, 0, nullptr, &worldMatrixBuffer, 0, 0);
 
@@ -289,9 +262,8 @@ bool Skybox::Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX p
     if (FAILED(hr))
         return hr;
 
-    SBSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<SBSceneMatrixBuffer*>(subresource.pData);
+    SceneMatrixBuffer& sceneBuffer = *reinterpret_cast<SceneMatrixBuffer*>(subresource.pData);
     sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
-    sceneBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
     context->Unmap(g_pSceneMatrixBuffer, 0);
 
     return S_OK;
