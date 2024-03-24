@@ -45,7 +45,6 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     if (FAILED(hr))
         return hr;
 
-    //hr = texture.Init(device, context, L"./shrek1.dds");
     this->shines = shines;
     hr = diffuse.Init(device, context, diffPath);
     if (FAILED(hr))
@@ -226,7 +225,6 @@ void Cube::Release() {
     if (g_pSamplerState) g_pSamplerState->Release();
     if (g_pRasterizerState) g_pRasterizerState->Release();
 
-    //if (g_pWorldMatrixBuffer) g_pWorldMatrixBuffer->Release();
     for (auto& buffer : g_pWorldMatrixBuffers)
         if (buffer)
             buffer->Release();
@@ -247,9 +245,6 @@ void Cube::Render(ID3D11DeviceContext* context) {
     context->IASetIndexBuffer(g_pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
     ID3D11SamplerState* samplers[] = { g_pSamplerState };
     context->PSSetSamplers(0, 1, samplers);
-
-    //ID3D11ShaderResourceView* resources[] = { texture.GetTexture() };
-    //context->PSSetShaderResources(0, 1, resources);
 
     ID3D11ShaderResourceView* resources[] = {
         diffuse.GetTexture(),
@@ -284,9 +279,6 @@ bool Cube::Frame(ID3D11DeviceContext* context, const std::vector<XMMATRIX>& worl
         worldMatrixBuffer.color = XMFLOAT4(shines, 0.0f, 0.0f, 0.0f);
         context->UpdateSubresource(g_pWorldMatrixBuffers[i], 0, nullptr, &worldMatrixBuffer, 0, 0);
     }
-    //worldMatrixBuffer.worldMatrix = worldMatrix;
-    //worldMatrixBuffer.color = XMFLOAT4(1,1,1,1);
-    //context->UpdateSubresource(g_pWorldMatrixBuffer, 0, nullptr, &worldMatrixBuffer, 0, 0);
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);

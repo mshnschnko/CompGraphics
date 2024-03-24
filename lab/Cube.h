@@ -39,8 +39,6 @@ private:
 	ID3D11DepthStencilState* g_pDepthState = nullptr;
 	std::vector<ID3D11Buffer*> g_pWorldMatrixBuffers = std::vector<ID3D11Buffer*>(1, nullptr);
 
-	//std::vector<ID3D11Buffer*> g_pWorldMatrixBuffers = std::vector<ID3D11Buffer*>(1, nullptr);
-
 	Texture diffuse, normal;
 	float shines;
 };
