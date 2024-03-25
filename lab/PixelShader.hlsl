@@ -23,8 +23,11 @@ struct PS_INPUT
 
 float4 main(PS_INPUT input) : SV_Target0
 {
+    input.binormal = normalize(input.binormal);
+    input.tangent = normalize(input.tangent);
+    input.normal = normalize(input.normal);
     float3 ambient = ambientColor.xyz * tex.Sample(smplr, input.uv).xyz;
     float3 localNorm = normal.Sample(smplr, input.uv).xyz * 2.0 - 1.0;
-    float3 norm = localNorm.x * normalize(input.tangent) + localNorm.y * input.binormal + localNorm.z * normalize(input.normal);
+    float3 norm = localNorm.x * input.tangent + localNorm.y * input.binormal + localNorm.z * input.normal;
     return float4(CalculateColor(ambient, norm, input.worldPos.xyz, shine.x, false), 1.0);
 }
