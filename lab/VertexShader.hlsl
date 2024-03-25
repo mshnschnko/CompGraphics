@@ -31,7 +31,7 @@ PS_INPUT main(VS_INPUT input)
     output.worldPos = mul(worldMatrix, float4(input.position, 1.0f));
     output.position = mul(viewProjectionMatrix, output.worldPos);
     output.normal = mul(worldMatrix, float4(input.normal, 0.0f)).xyz;
-    output.tangent = mul(worldMatrix, float4(input.tangent, 0.0f));
+    output.tangent = mul(worldMatrix, float4(input.tangent, 0.0f)).xyz;
     output.binormal = normalize(cross(output.normal, output.tangent));
     output.uv = input.uv;
 
