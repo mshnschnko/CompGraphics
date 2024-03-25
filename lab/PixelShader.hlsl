@@ -18,13 +18,13 @@ struct PS_INPUT
     float2 uv : TEXCOORD;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
+    float3 binormal : BINORMAL;
 };
 
 float4 main(PS_INPUT input) : SV_Target0
 {
     float3 ambient = ambientColor.xyz * tex.Sample(smplr, input.uv).xyz;
-    float3 binorm = normalize(cross(input.normal, input.tangent));
     float3 localNorm = normal.Sample(smplr, input.uv).xyz * 2.0 - 1.0;
-    float3 norm = localNorm.x * normalize(input.tangent) + localNorm.y * binorm + localNorm.z * normalize(input.normal);
+    float3 norm = localNorm.x * normalize(input.tangent) + localNorm.y * input.binormal + localNorm.z * normalize(input.normal);
     return float4(CalculateColor(ambient, norm, input.worldPos.xyz, shine.x, false), 1.0);
 }
