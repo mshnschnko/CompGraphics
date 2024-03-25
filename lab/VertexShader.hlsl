@@ -12,7 +12,6 @@ struct VS_INPUT
     float2 uv : TEXCOORD;
     float3 normal : NORMAL;
     float3 tangent : TANGENT;
-    float3 binormal : BINORMAL;
 };
 
 struct PS_INPUT
