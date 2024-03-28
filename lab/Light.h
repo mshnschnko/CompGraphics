@@ -4,26 +4,26 @@
 #include <dxgi.h>
 #include <d3d11.h>
 #include <directxmath.h>
-#include <string>
 #include <vector>
 
 #include "structures.h"
-#include "texture.h"
 
 using namespace DirectX;
 
-class Skybox {
+class Light {
 public:
-	HRESULT Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight);
+	HRESULT Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight, XMFLOAT4 color, XMFLOAT4 position);
 
-	void Release();
+	void Realese();
 
-	void Resize(int screenWidth, int screenHeight);
+	void Resize(int screenWidth, int screenHeight) {};
 
 	void Render(ID3D11DeviceContext* context);
 
 	bool Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos);
 
+	XMFLOAT4 GetColor() { return color; };
+	XMFLOAT4 GetPosition() { return position; };
 private:
 	void GenerateSphere(UINT LatLines, UINT LongLines, std::vector<SimpleVertex>& vertices, std::vector<UINT>& indices);
 
@@ -32,15 +32,15 @@ private:
 	ID3D11Buffer* g_pWorldMatrixBuffer = nullptr;
 	ID3D11Buffer* g_pSceneMatrixBuffer = nullptr;
 	ID3D11RasterizerState* g_pRasterizerState = nullptr;
-	ID3D11SamplerState* g_pSamplerState = nullptr;
 
 	ID3D11InputLayout* g_pVertexLayout = nullptr;
 	ID3D11VertexShader* g_pVertexShader = nullptr;
 	ID3D11PixelShader* g_pPixelShader = nullptr;
 
-	Texture texture;
-
 	UINT numSphereVertices = 0;
 	UINT numSphereFaces = 0;
-	float radius = 1.0f;
+	float radius = 0.1f;
+
+	XMFLOAT4 color;
+	XMFLOAT4 position;
 };

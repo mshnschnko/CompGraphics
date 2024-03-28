@@ -15,6 +15,34 @@ struct SceneMatrixBuffer {
 
 struct TexVertex
 {
+	XMFLOAT3 pos;
+	XMFLOAT2 uv;
+	XMFLOAT3 normal;
+	XMFLOAT3 tangent;
+};
+
+struct LightableSceneMatrixBuffer {
+	XMMATRIX viewProjectionMatrix;
+	XMFLOAT4 cameraPos;
+	XMINT4 lightCount;
+	XMFLOAT4 lightPos[10];
+	XMFLOAT4 lightColor[10];
+	XMFLOAT4 ambientColor;
+};
+
+struct SimpleVertex
+{
 	float x, y, z;
-	float u, v;
+};
+
+struct SBWorldMatrixBuffer
+{
+	XMMATRIX worldMatrix;
+	XMFLOAT4 size;
+};
+
+struct SBSceneMatrixBuffer
+{
+	XMMATRIX viewProjectionMatrix;
+	XMFLOAT4 cameraPos;
 };

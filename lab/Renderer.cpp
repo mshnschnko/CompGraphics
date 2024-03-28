@@ -150,7 +150,6 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
 }
 
 HRESULT Renderer::InitBackBuffer() {
-    // Create a render target view
     ID3D11Texture2D* pBackBuffer = NULL;
     HRESULT hr = g_pSwapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (LPVOID*)&pBackBuffer);
     if (FAILED(hr))
@@ -235,7 +234,6 @@ bool Renderer::Frame() {
     XMMATRIX mView;
     camera.GetBaseViewMatrix(mView);
 
-    //XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)m_width / (FLOAT)m_height, 0.01f, 100.0f);
     XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)m_width / (FLOAT)m_height, 100.0f, 0.01f);
     HRESULT hr = scene.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos());
     if (FAILED(hr))
