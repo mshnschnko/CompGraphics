@@ -1,12 +1,25 @@
 #include "Cube.h"
+#include "timer.h"
 
-HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth,
-    int screenHeight, UINT cnt, const wchar_t* diffPath, const wchar_t* normalPath, float shines) {
+HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight,
+    std::vector<const wchar_t*> diffPaths, const wchar_t* normalPath, float shines, const std::vector<XMFLOAT4>& positions) {
+    
+    assert(positions.size() == MAX_CUBES);
+
+    frustum.screenDepth = 0.1f;
+
+    for (int i = 0; i < MAX_CUBES; i++) {
+        CubeModel tmp;
+        float textureIndex = (float)(rand() % diffPaths.size());
+        tmp.pos = positions[i];
+        tmp.params = XMFLOAT4(shines, (float)(rand() % 10 - 5), textureIndex, textureIndex > 0.0f ? 0.0f : 1.0f);
+        cubesModelVector.push_back(tmp);
+    }
+
     ID3DBlob* pVSBlob = nullptr;
     HRESULT hr = D3DReadFileToBlob(L"VertexShader.cso", &pVSBlob);
     if (FAILED(hr)) {
-        MessageBox(nullptr,
-            L"VertexShader.cso not found.", L"Error", MB_OK);
+        MessageBox(nullptr, L"VertexShader.cso not found.", L"Error", MB_OK);
         return hr;
     }
 
@@ -24,8 +37,7 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     };
     UINT numElements = ARRAYSIZE(layout);
 
-    hr = device->CreateInputLayout(layout, numElements, pVSBlob->GetBufferPointer(),
-        pVSBlob->GetBufferSize(), &g_pVertexLayout);
+    hr = device->CreateInputLayout(layout, numElements, pVSBlob->GetBufferPointer(), pVSBlob->GetBufferSize(), &g_pVertexLayout);
     pVSBlob->Release();
     if (FAILED(hr))
         return hr;
@@ -35,8 +47,7 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     ID3DBlob* pPSBlob = nullptr;
     hr = D3DReadFileToBlob(L"PixelShader.cso", &pPSBlob);
     if (FAILED(hr)) {
-        MessageBox(nullptr,
-            L"PixelShader.cso not found.", L"Error", MB_OK);
+        MessageBox(nullptr, L"PixelShader.cso not found.", L"Error", MB_OK);
         return hr;
     }
 
@@ -45,12 +56,9 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     if (FAILED(hr))
         return hr;
 
-    this->shines = shines;
-    hr = diffuse.Init(device, context, diffPath);
-    if (FAILED(hr))
-        return hr;
-
-    hr = normal.Init(device, context, normalPath);
+    cubesTextures = std::vector<Texture>(2);
+    hr = cubesTextures[0].InitArray(device, context, diffPaths);
+    hr = cubesTextures[1].Init(device, context, normalPath);
     if (FAILED(hr))
         return hr;
 
@@ -134,30 +142,38 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
         return hr;
 
     D3D11_BUFFER_DESC descWMB = {};
-    descWMB.ByteWidth = sizeof(WorldMatrixBuffer);
+    descWMB.ByteWidth = sizeof(GeomBuffer) * MAX_CUBES;
     descWMB.Usage = D3D11_USAGE_DEFAULT;
     descWMB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     descWMB.CPUAccessFlags = 0;
     descWMB.MiscFlags = 0;
     descWMB.StructureByteStride = 0;
 
-    WorldMatrixBuffer worldMatrixBuffer;
-    worldMatrixBuffer.worldMatrix = DirectX::XMMatrixIdentity();
-
-    D3D11_SUBRESOURCE_DATA data;
-    data.pSysMem = &worldMatrixBuffer;
-    data.SysMemPitch = sizeof(worldMatrixBuffer);
-    data.SysMemSlicePitch = 0;
-
-    g_pWorldMatrixBuffers = std::vector<ID3D11Buffer*>(cnt, nullptr);
-    for (UINT i = 0; i < cnt; i++) {
-        hr = device->CreateBuffer(&descWMB, &data, &g_pWorldMatrixBuffers[i]);
-        if (FAILED(hr))
-            return hr;
+    GeomBuffer geomBufferInst[MAX_CUBES];
+    for (int i = 0; i < MAX_CUBES; i++) {
+        geomBufferInst[i].worldMatrix = XMMatrixTranslation(cubesModelVector[i].pos.x, cubesModelVector[i].pos.y, cubesModelVector[i].pos.z);
+        geomBufferInst[i].norm = geomBufferInst[i].worldMatrix;
+        geomBufferInst[i].params = cubesModelVector[i].params;
     }
 
+    D3D11_SUBRESOURCE_DATA data;
+    data.pSysMem = &geomBufferInst;
+    data.SysMemPitch = sizeof(geomBufferInst);
+    data.SysMemSlicePitch = 0;
+
+    //g_pWorldMatrixBuffers = std::vector<ID3D11Buffer*>(cnt, nullptr);
+    //for (UINT i = 0; i < cnt; i++) {
+    //    hr = device->CreateBuffer(&descWMB, &data, &g_pWorldMatrixBuffers[i]);
+    //    if (FAILED(hr))
+    //        return hr;
+    //}
+
+    hr = device->CreateBuffer(&descWMB, &data, &g_pGeomBuffer);
+    if (FAILED(hr))
+        return hr;
+
     D3D11_BUFFER_DESC descSMB = {};
-    descSMB.ByteWidth = sizeof(LightableSceneMatrixBuffer);
+    descSMB.ByteWidth = sizeof(CubeSceneMatrixBuffer);
     descSMB.Usage = D3D11_USAGE_DYNAMIC;
     descSMB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     descSMB.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
@@ -165,6 +181,18 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     descSMB.StructureByteStride = 0;
 
     hr = device->CreateBuffer(&descSMB, nullptr, &g_pSceneMatrixBuffer);
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_BUFFER_DESC descLCB = {};
+    descLCB.ByteWidth = sizeof(LightableCB);
+    descLCB.Usage = D3D11_USAGE_DYNAMIC;
+    descLCB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    descLCB.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    descLCB.MiscFlags = 0;
+    descLCB.StructureByteStride = 0;
+
+    hr = device->CreateBuffer(&descLCB, nullptr, &g_LightConstantBuffer);
     if (FAILED(hr))
         return hr;
 
@@ -219,15 +247,18 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
 
 
 void Cube::Release() {
-    diffuse.Release();
-    normal.Release();
+    for (auto& tex : cubesTextures)
+        tex.Release();
 
     if (g_pSamplerState) g_pSamplerState->Release();
     if (g_pRasterizerState) g_pRasterizerState->Release();
 
-    for (auto& buffer : g_pWorldMatrixBuffers)
-        if (buffer)
-            buffer->Release();
+    //for (auto& buffer : g_pWorldMatrixBuffers)
+    //    if (buffer)
+    //        buffer->Release();
+
+    if (g_pGeomBuffer) g_pGeomBuffer->Release();
+    if (g_LightConstantBuffer) g_LightConstantBuffer->Release();
 
     if (g_pDepthState) g_pDepthState->Release();
     if (g_pSceneMatrixBuffer) g_pSceneMatrixBuffer->Release();
@@ -247,55 +278,220 @@ void Cube::Render(ID3D11DeviceContext* context) {
     context->PSSetSamplers(0, 1, samplers);
 
     ID3D11ShaderResourceView* resources[] = {
-        diffuse.GetTexture(),
-        normal.GetTexture()
+        cubesTextures[0].GetTexture(),
+        cubesTextures[1].GetTexture()
     };
     context->PSSetShaderResources(0, 2, resources);
 
     ID3D11Buffer* vertexBuffers[] = { g_pVertexBuffer };
-    UINT strides[] = { sizeof(TexVertex)};
+    UINT strides[] = { sizeof(TexVertex) };
     UINT offsets[] = { 0 };
-
     context->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
     context->IASetInputLayout(g_pVertexLayout);
     context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    context->VSSetShader(g_pVertexShader, nullptr, 0);
-    context->VSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
-    context->PSSetShader(g_pPixelShader, nullptr, 0);
-    context->PSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
 
-    for (auto& buffer : g_pWorldMatrixBuffers) {
-        context->PSSetConstantBuffers(0, 1, &buffer);
-        context->VSSetConstantBuffers(0, 1, &buffer);
-        context->DrawIndexed(36, 0, 0);
-    }
+    context->VSSetShader(g_pVertexShader, nullptr, 0);
+    context->VSSetConstantBuffers(0, 1, &g_pGeomBuffer);
+    context->VSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
+
+    context->PSSetShader(g_pPixelShader, nullptr, 0);
+    context->PSSetConstantBuffers(0, 1, &g_pGeomBuffer);
+    context->PSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
+    context->PSSetConstantBuffers(2, 1, &g_LightConstantBuffer);
+
+    context->DrawIndexedInstanced(36, (UINT)cubesIndexies.size(), 0, 0, 0);
+    //for (auto& buffer : g_pWorldMatrixBuffers) {
+    //    context->PSSetConstantBuffers(0, 1, &buffer);
+    //    context->VSSetConstantBuffers(0, 1, &buffer);
+    //    context->DrawIndexed(36, 0, 0);
+    //}
 }
 
+void Cube::GetFrustum(XMMATRIX viewMatrix, XMMATRIX projectionMatrix) {
+    XMFLOAT4X4 pMatrix;
+    XMStoreFloat4x4(&pMatrix, projectionMatrix);
 
-bool Cube::Frame(ID3D11DeviceContext* context, const std::vector<XMMATRIX>& worldMatricies, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix, XMFLOAT3& cameraPos, std::vector<Light>& lights) {
-    WorldMatrixBuffer worldMatrixBuffer;
-    for (int i = 0; i < worldMatricies.size() && i < g_pWorldMatrixBuffers.size(); i++) {
-        worldMatrixBuffer.worldMatrix = worldMatricies[i];
-        worldMatrixBuffer.color = XMFLOAT4(shines, 0.0f, 0.0f, 0.0f);
-        context->UpdateSubresource(g_pWorldMatrixBuffers[i], 0, nullptr, &worldMatrixBuffer, 0, 0);
+    float zMinimum = -pMatrix._43 / pMatrix._33;
+    float r = frustum.screenDepth / (frustum.screenDepth - zMinimum);
+
+    pMatrix._33 = r;
+    pMatrix._43 = -r * zMinimum;
+    projectionMatrix = XMLoadFloat4x4(&pMatrix);
+
+    XMMATRIX finalMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
+
+    XMFLOAT4X4 matrix;
+    XMStoreFloat4x4(&matrix, finalMatrix);
+
+    frustum.planes[0][0] = matrix._14 + matrix._13;
+    frustum.planes[0][1] = matrix._24 + matrix._23;
+    frustum.planes[0][2] = matrix._34 + matrix._33;
+    frustum.planes[0][3] = matrix._44 + matrix._43;
+
+    float length = sqrtf((frustum.planes[0][0] * frustum.planes[0][0])
+        + (frustum.planes[0][1] * frustum.planes[0][1]) + (frustum.planes[0][2] * frustum.planes[0][2]));
+    frustum.planes[0][0] /= length;
+    frustum.planes[0][1] /= length;
+    frustum.planes[0][2] /= length;
+    frustum.planes[0][3] /= length;
+
+    frustum.planes[1][0] = matrix._14 - matrix._13;
+    frustum.planes[1][1] = matrix._24 - matrix._23;
+    frustum.planes[1][2] = matrix._34 - matrix._33;
+    frustum.planes[1][3] = matrix._44 - matrix._43;
+
+    length = sqrtf((frustum.planes[1][0] * frustum.planes[1][0])
+        + (frustum.planes[1][1] * frustum.planes[1][1]) + (frustum.planes[1][2] * frustum.planes[1][2]));
+    frustum.planes[1][0] /= length;
+    frustum.planes[1][1] /= length;
+    frustum.planes[1][2] /= length;
+    frustum.planes[1][3] /= length;
+
+    frustum.planes[2][0] = matrix._14 + matrix._11;
+    frustum.planes[2][1] = matrix._24 + matrix._21;
+    frustum.planes[2][2] = matrix._34 + matrix._31;
+    frustum.planes[2][3] = matrix._44 + matrix._41;
+
+    length = sqrtf((frustum.planes[2][0] * frustum.planes[2][0])
+        + (frustum.planes[2][1] * frustum.planes[2][1]) + (frustum.planes[2][2] * frustum.planes[2][2]));
+    frustum.planes[2][0] /= length;
+    frustum.planes[2][1] /= length;
+    frustum.planes[2][2] /= length;
+    frustum.planes[2][3] /= length;
+
+    frustum.planes[3][0] = matrix._14 - matrix._11;
+    frustum.planes[3][1] = matrix._24 - matrix._21;
+    frustum.planes[3][2] = matrix._34 - matrix._31;
+    frustum.planes[3][3] = matrix._44 - matrix._41;
+
+    length = sqrtf((frustum.planes[3][0] * frustum.planes[3][0])
+        + (frustum.planes[3][1] * frustum.planes[3][1]) + (frustum.planes[3][2] * frustum.planes[3][2]));
+    frustum.planes[3][0] /= length;
+    frustum.planes[3][1] /= length;
+    frustum.planes[3][2] /= length;
+    frustum.planes[3][3] /= length;
+
+    frustum.planes[4][0] = matrix._14 - matrix._12;
+    frustum.planes[4][1] = matrix._24 - matrix._22;
+    frustum.planes[4][2] = matrix._34 - matrix._32;
+    frustum.planes[4][3] = matrix._44 - matrix._42;
+
+    length = sqrtf((frustum.planes[4][0] * frustum.planes[4][0])
+        + (frustum.planes[4][1] * frustum.planes[4][1]) + (frustum.planes[4][2] * frustum.planes[4][2]));
+    frustum.planes[4][0] /= length;
+    frustum.planes[4][1] /= length;
+    frustum.planes[4][2] /= length;
+    frustum.planes[4][3] /= length;
+
+    frustum.planes[5][0] = matrix._14 + matrix._12;
+    frustum.planes[5][1] = matrix._24 + matrix._22;
+    frustum.planes[5][2] = matrix._34 + matrix._32;
+    frustum.planes[5][3] = matrix._44 + matrix._42;
+
+    length = sqrtf((frustum.planes[5][0] * frustum.planes[5][0])
+        + (frustum.planes[5][1] * frustum.planes[5][1]) + (frustum.planes[5][2] * frustum.planes[5][2]));
+    frustum.planes[5][0] /= length;
+    frustum.planes[5][1] /= length;
+    frustum.planes[5][2] /= length;
+    frustum.planes[5][3] /= length;
+}
+
+bool Cube::IsInFrustum(float maxWidth, float maxHeight, float maxDepth, float minWidth, float minHeight, float minDepth) {
+    for (int i = 0; i < 6; i++) {
+        if (((frustum.planes[i][0] * minWidth) + (frustum.planes[i][1] * minHeight) + (frustum.planes[i][2] * minDepth) + (frustum.planes[i][3] * 1.0f)) >= 0.0f ||
+            ((frustum.planes[i][0] * maxWidth) + (frustum.planes[i][1] * minHeight) + (frustum.planes[i][2] * minDepth) + (frustum.planes[i][3] * 1.0f)) >= 0.0f ||
+            ((frustum.planes[i][0] * minWidth) + (frustum.planes[i][1] * maxHeight) + (frustum.planes[i][2] * minDepth) + (frustum.planes[i][3] * 1.0f)) >= 0.0f ||
+            ((frustum.planes[i][0] * maxWidth) + (frustum.planes[i][1] * maxHeight) + (frustum.planes[i][2] * minDepth) + (frustum.planes[i][3] * 1.0f)) >= 0.0f ||
+            ((frustum.planes[i][0] * minWidth) + (frustum.planes[i][1] * minHeight) + (frustum.planes[i][2] * maxDepth) + (frustum.planes[i][3] * 1.0f)) >= 0.0f ||
+            ((frustum.planes[i][0] * maxWidth) + (frustum.planes[i][1] * minHeight) + (frustum.planes[i][2] * maxDepth) + (frustum.planes[i][3] * 1.0f)) >= 0.0f ||
+            ((frustum.planes[i][0] * minWidth) + (frustum.planes[i][1] * maxHeight) + (frustum.planes[i][2] * maxDepth) + (frustum.planes[i][3] * 1.0f)) >= 0.0f ||
+            ((frustum.planes[i][0] * maxWidth) + (frustum.planes[i][1] * maxHeight) + (frustum.planes[i][2] * maxDepth) + (frustum.planes[i][3] * 1.0f)) >= 0.0f)
+            continue;
+        else
+            return false;
     }
+    return true;
+}
+
+bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix, XMFLOAT3& cameraPos, const Light& lights) {
+    auto duration = Timer::GetInstance().Clock();
+    GeomBuffer geomBufferInst[MAX_CUBES];
+    //XMMatrixRotationY((float)duration * angle_velocity * 0.25f)* XMMatrixTranslation((float)sin(duration) * 3.0f, 0.0f, (float)cos(duration) * 3.0f)
+    for (int i = 0; i < MAX_CUBES; i++) {
+        geomBufferInst[i].worldMatrix = 
+            XMMatrixRotationX((float)duration * cubesModelVector[i].params.x * 0.01f) * 
+            XMMatrixTranslation((float)sin(duration) * 0.5f, (float)cos(duration) * 0.5f, (float)sin(duration) * 0.5f) *
+            XMMatrixRotationY((float)duration * cubesModelVector[i].params.y * 1.5f) *
+            XMMatrixRotationZ((float)(sin(duration * cubesModelVector[i].params.y * 0.30f) * 0.25f)) *
+            XMMatrixTranslation((float)sin(duration * angle_velocity * cubesModelVector[i].params.y * 1.0), (float)(sin(duration * cubesModelVector[i].params.y * 0.30) * 0.25f), (float)cos(duration) * 3.0f) *
+            XMMatrixTranslation(cubesModelVector[i].pos.x, cubesModelVector[i].pos.y, cubesModelVector[i].pos.z);
+        geomBufferInst[i].norm = geomBufferInst[i].worldMatrix;
+        geomBufferInst[i].params = cubesModelVector[i].params;
+    }
+
+    context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, &geomBufferInst, 0, 0);
+
+    GetFrustum(viewMatrix, projectionMatrix);
+
+    static const XMFLOAT4 AABB[] = {
+      {-0.5, -0.5, -0.5, 1.0},
+      {0.5,  0.5, 0.5, 1.0}
+    };
+
+    cubesIndexies.clear();
+    for (int i = 0; i < MAX_CUBES; i++) {
+        XMFLOAT4 min, max;
+
+        XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
+        XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
+
+        if (IsInFrustum(max.x, max.y, max.z, min.x, min.y, min.z))
+            cubesIndexies.push_back(i);
+    }
+
+    //WorldMatrixBuffer worldMatrixBuffer;
+    //for (int i = 0; i < worldMatricies.size() && i < g_pWorldMatrixBuffers.size(); i++) {
+    //    worldMatrixBuffer.worldMatrix = worldMatricies[i];
+    //    worldMatrixBuffer.color = XMFLOAT4(shines, 0.0f, 0.0f, 0.0f);
+    //    context->UpdateSubresource(g_pWorldMatrixBuffers[i], 0, nullptr, &worldMatrixBuffer, 0, 0);
+    //}
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
     if (FAILED(hr))
         return FAILED(hr);
 
-    LightableSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<LightableSceneMatrixBuffer*>(subresource.pData);
+    //LightableSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<LightableSceneMatrixBuffer*>(subresource.pData);
+    CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
     sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
-    sceneBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
-    sceneBuffer.ambientColor = XMFLOAT4(0.6f, 0.6f, 0.3f, 1.0f);
-    sceneBuffer.lightCount = XMINT4((int32_t)lights.size(), 0, 0, 0);
-    for (int i = 0; i < lights.size(); i++) {
-        sceneBuffer.lightPos[i] = lights[i].GetPosition();
-        sceneBuffer.lightColor[i] = lights[i].GetColor();
-    }
+    //sceneBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
+    //sceneBuffer.ambientColor = XMFLOAT4(0.6f, 0.6f, 0.3f, 1.0f);
+    //sceneBuffer.lightCount = XMINT4((int32_t)lights.size(), 0, 0, 0);
+    //for (int i = 0; i < lights.size(); i++) {
+    //    sceneBuffer.lightPos[i] = lights[i].GetPosition();
+    //    sceneBuffer.lightColor[i] = lights[i].GetColor();
+    //}
+    for (int i = 0; i < cubesIndexies.size(); i++)
+        sceneBuffer.indexBuffer[i] = XMINT4(cubesIndexies[i], 0, 0, 0);
 
     context->Unmap(g_pSceneMatrixBuffer, 0);
+
+    hr = context->Map(g_LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (FAILED(hr))
+        return FAILED(hr);
+
+    LightableCB& lightBuffer = *reinterpret_cast<LightableCB*>(subresource.pData);
+    lightBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
+    lightBuffer.ambientColor = XMFLOAT4(0.9f, 0.9f, 0.4f, 1.0f);
+    auto& lightColors = lights.GetColors();
+    auto& lightPos = lights.GetPositions();
+    lightBuffer.lightCount = XMINT4(int(lightColors.size()), 1, 0, 0);
+
+    for (int i = 0; i < lightColors.size(); i++) {
+        lightBuffer.lightPos[i] = XMFLOAT4(lightPos[i].x, lightPos[i].y, lightPos[i].z, 1.0f);
+        lightBuffer.lightColor[i] = XMFLOAT4(lightColors[i].x, lightColors[i].y, lightColors[i].z, 1.0f);
+    }
+    context->Unmap(g_LightConstantBuffer, 0);
 
     return S_OK;
 }

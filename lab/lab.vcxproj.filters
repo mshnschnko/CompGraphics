@@ -60,6 +60,9 @@
     <ClInclude Include="Light.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="Consts.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lab.cpp">
@@ -119,5 +122,9 @@
   <ItemGroup>
     <None Include="SceneCB.hlsli" />
     <None Include="CalculateColor.hlsli" />
+    <None Include="CubeCB.hlsli" />
+    <None Include="LightCB.hlsli" />
+    <None Include="TransparentCB.hlsli" />
+    <None Include="LightBuffers.hlsli" />
   </ItemGroup>
 </Project>

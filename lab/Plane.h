@@ -21,7 +21,8 @@ static const XMFLOAT4 Vertices[] = {
 
 class Plane {
 public:
-    HRESULT Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight, UINT cnt, const std::vector<XMFLOAT4> colors);
+    HRESULT Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth,
+        int screenHeight, UINT cnt, const std::vector<XMFLOAT4> colors);
 
     void Release();
 
@@ -29,7 +30,8 @@ public:
 
     void Render(ID3D11DeviceContext* context);
 
-    bool Frame(ID3D11DeviceContext* context, const std::vector<XMMATRIX>& worldMatricies, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos, std::vector<Light> lights);
+    bool Frame(ID3D11DeviceContext* context, const std::vector<XMMATRIX>& worldMatricies,
+        XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos, const Light& lights);
 private:
     float DistToPlane(XMMATRIX worldMatrix, XMFLOAT3 cameraPos);
 
@@ -40,6 +42,7 @@ private:
     ID3D11Buffer* g_pVertexBuffer = nullptr;
     ID3D11Buffer* g_pIndexBuffer = nullptr;
     ID3D11Buffer* g_pSceneMatrixBuffer = nullptr;
+    ID3D11Buffer* g_LightConstantBuffer = nullptr;
     ID3D11RasterizerState* g_pRasterizerState = nullptr;
     ID3D11DepthStencilState* g_pDepthState = nullptr;
     ID3D11BlendState* g_pTransBlendState = nullptr;

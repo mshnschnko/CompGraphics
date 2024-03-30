@@ -1,13 +1,5 @@
-cbuffer WorldMatrixBuffer : register(b0)
-{
-    float4x4 worldMatrix;
-    float4 color;
-};
-
-cbuffer SceneMatrixBuffer : register(b1)
-{
-    float4x4 viewProjectionMatrix;
-};
+#include "TransparentCB.hlsli"
+#include "CalculateColor.hlsli"
 
 struct VS_INPUT
 {
@@ -24,7 +16,7 @@ PS_INPUT main(VS_INPUT input)
 {
     PS_INPUT output;
 
-    output.position = mul(viewProjectionMatrix, mul(worldMatrix, input.position));
     output.worldPos = mul(worldMatrix, input.position);
+    output.position = mul(viewProjectionMatrix, output.worldPos);
     return output;
 }

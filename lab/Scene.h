@@ -29,13 +29,14 @@ public:
     bool Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos);
 
 private:
-    bool FrameCubes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos);
+    //bool FrameCubes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos);
     bool FramePlanes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos);
 
-    Cube cubes;
+    Cube cube;
     Plane planes;
     Skybox skybox;
-    std::vector<Light> lights;
+    //std::vector<Light> lights;
+    Light lights;
 
     float angle_velocity = XM_PIDIV2;
 };
