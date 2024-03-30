@@ -56,17 +56,6 @@ void Scene::Render(ID3D11DeviceContext* context) {
     planes.Render(context);
 }
 
-//bool Scene::FrameCubes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
-//    auto duration = Timer::GetInstance().Clock();
-//    std::vector<XMMATRIX> worldMatricies = std::vector<XMMATRIX>(2);
-//
-//    worldMatricies[0] = XMMatrixRotationY((float)duration * angle_velocity);
-//    worldMatricies[1] = XMMatrixRotationY((float)duration * angle_velocity * 0.25f) * XMMatrixTranslation((float)sin(duration) * 3.0f, 0.0f, (float)cos(duration) * 3.0f);
-//    bool failed = cubes.Frame(context, worldMatricies, viewMatrix, projectionMatrix, cameraPos, lights);
-//
-//    return failed;
-//}
-
 bool Scene::FramePlanes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
     auto duration = Timer::GetInstance().Clock();
     std::vector<XMMATRIX> worldMatricies = std::vector<XMMATRIX>(3);
@@ -81,10 +70,6 @@ bool Scene::FramePlanes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMAT
 }
 
 bool Scene::Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos) {
-    //bool failed = FrameCubes(context, viewMatrix, projectionMatrix, cameraPos);
-    //if (failed)
-    //    return false;
-
     bool failed = cube.Frame(context, viewMatrix, projectionMatrix, cameraPos, lights);
     if (failed)
         return false;

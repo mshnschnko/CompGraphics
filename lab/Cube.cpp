@@ -161,13 +161,6 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     data.SysMemPitch = sizeof(geomBufferInst);
     data.SysMemSlicePitch = 0;
 
-    //g_pWorldMatrixBuffers = std::vector<ID3D11Buffer*>(cnt, nullptr);
-    //for (UINT i = 0; i < cnt; i++) {
-    //    hr = device->CreateBuffer(&descWMB, &data, &g_pWorldMatrixBuffers[i]);
-    //    if (FAILED(hr))
-    //        return hr;
-    //}
-
     hr = device->CreateBuffer(&descWMB, &data, &g_pGeomBuffer);
     if (FAILED(hr))
         return hr;
@@ -253,10 +246,6 @@ void Cube::Release() {
     if (g_pSamplerState) g_pSamplerState->Release();
     if (g_pRasterizerState) g_pRasterizerState->Release();
 
-    //for (auto& buffer : g_pWorldMatrixBuffers)
-    //    if (buffer)
-    //        buffer->Release();
-
     if (g_pGeomBuffer) g_pGeomBuffer->Release();
     if (g_LightConstantBuffer) g_LightConstantBuffer->Release();
 
@@ -300,11 +289,6 @@ void Cube::Render(ID3D11DeviceContext* context) {
     context->PSSetConstantBuffers(2, 1, &g_LightConstantBuffer);
 
     context->DrawIndexedInstanced(36, (UINT)cubesIndexies.size(), 0, 0, 0);
-    //for (auto& buffer : g_pWorldMatrixBuffers) {
-    //    context->PSSetConstantBuffers(0, 1, &buffer);
-    //    context->VSSetConstantBuffers(0, 1, &buffer);
-    //    context->DrawIndexed(36, 0, 0);
-    //}
 }
 
 void Cube::GetFrustum(XMMATRIX viewMatrix, XMMATRIX projectionMatrix) {
@@ -416,7 +400,6 @@ bool Cube::IsInFrustum(float maxWidth, float maxHeight, float maxDepth, float mi
 bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix, XMFLOAT3& cameraPos, const Light& lights) {
     auto duration = Timer::GetInstance().Clock();
     GeomBuffer geomBufferInst[MAX_CUBES];
-    //XMMatrixRotationY((float)duration * angle_velocity * 0.25f)* XMMatrixTranslation((float)sin(duration) * 3.0f, 0.0f, (float)cos(duration) * 3.0f)
     for (int i = 0; i < MAX_CUBES; i++) {
         geomBufferInst[i].worldMatrix = 
             XMMatrixRotationX((float)duration * cubesModelVector[i].params.x * 0.01f) * 
@@ -449,28 +432,14 @@ bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& p
             cubesIndexies.push_back(i);
     }
 
-    //WorldMatrixBuffer worldMatrixBuffer;
-    //for (int i = 0; i < worldMatricies.size() && i < g_pWorldMatrixBuffers.size(); i++) {
-    //    worldMatrixBuffer.worldMatrix = worldMatricies[i];
-    //    worldMatrixBuffer.color = XMFLOAT4(shines, 0.0f, 0.0f, 0.0f);
-    //    context->UpdateSubresource(g_pWorldMatrixBuffers[i], 0, nullptr, &worldMatrixBuffer, 0, 0);
-    //}
-
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
     if (FAILED(hr))
         return FAILED(hr);
 
-    //LightableSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<LightableSceneMatrixBuffer*>(subresource.pData);
     CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
     sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
-    //sceneBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
-    //sceneBuffer.ambientColor = XMFLOAT4(0.6f, 0.6f, 0.3f, 1.0f);
-    //sceneBuffer.lightCount = XMINT4((int32_t)lights.size(), 0, 0, 0);
-    //for (int i = 0; i < lights.size(); i++) {
-    //    sceneBuffer.lightPos[i] = lights[i].GetPosition();
-    //    sceneBuffer.lightColor[i] = lights[i].GetColor();
-    //}
+
     for (int i = 0; i < cubesIndexies.size(); i++)
         sceneBuffer.indexBuffer[i] = XMINT4(cubesIndexies[i], 0, 0, 0);
 

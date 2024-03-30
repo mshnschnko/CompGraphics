@@ -48,7 +48,6 @@ private:
 	ID3D11RasterizerState* g_pRasterizerState = nullptr;
 	ID3D11SamplerState* g_pSamplerState = nullptr;
 	ID3D11DepthStencilState* g_pDepthState = nullptr;
-	//std::vector<ID3D11Buffer*> g_pWorldMatrixBuffers = std::vector<ID3D11Buffer*>(1, nullptr);
 
 	std::vector<Texture> cubesTextures;
 	std::vector<CubeModel> cubesModelVector;

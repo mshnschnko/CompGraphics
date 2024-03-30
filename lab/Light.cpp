@@ -174,8 +174,6 @@ HRESULT Light::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scre
     descWM.MiscFlags = 0;
     descWM.StructureByteStride = 0;
 
-    //WorldMatrixBuffer worldMatrixBuffer;
-    //worldMatrixBuffer.worldMatrix = DirectX::XMMatrixIdentity();
     WorldMatrixBuffer lightGeomBuffer[MAX_LIGHTS];
     for (UINT i = 0; i < MAX_LIGHTS; i++) {
         lightGeomBuffer[i].worldMatrix =
