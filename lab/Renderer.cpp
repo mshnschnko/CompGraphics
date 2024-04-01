@@ -1,4 +1,7 @@
 #include "Renderer.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_dx11.h"
+#include "imgui/imgui_impl_win32.h"
 
 using namespace DirectX;
 
@@ -189,6 +192,8 @@ HRESULT Renderer::InitBackBuffer() {
 HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT screenWidth, UINT screenHeight) {
     Resize(screenWidth, screenHeight);
 
+    m_useFrustumCulling = true;
+
     m_rbPressed = false;
     m_prevMouseX = 0;
     m_prevMouseY = 0;
@@ -200,6 +205,15 @@ HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT sc
     hr = InitDevice(g_hWnd);
     if (FAILED(hr))
         return hr;
+
+#ifdef _DEBUG
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplWin32_Init(g_hWnd);
+    ImGui_ImplDX11_Init(g_pd3dDevice, g_pImmediateContext);
+#endif
     
     return S_OK;
 }
@@ -234,8 +248,19 @@ bool Renderer::Frame() {
     XMMATRIX mView;
     camera.GetBaseViewMatrix(mView);
 
+#ifdef _DEBUG
+    ImGui_ImplDX11_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+    {
+        ImGui::Begin("FrustumCulling");
+        ImGui::Checkbox("Frustum Culling", &m_useFrustumCulling);
+        ImGui::End();
+    }
+#endif
+
     XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)m_width / (FLOAT)m_height, 100.0f, 0.01f);
-    HRESULT hr = scene.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos());
+    HRESULT hr = scene.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos(), m_useFrustumCulling);
     if (FAILED(hr))
         return FAILED(hr);
 
@@ -271,6 +296,11 @@ void Renderer::Render() {
 
     scene.Render(g_pImmediateContext);
 
+#ifdef _DEBUG
+    ImGui::Render();
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+#endif
+
     g_pSwapChain->Present(0, 0);
 }
 
@@ -280,6 +310,12 @@ void Renderer::Resize(UINT screenWidth, UINT screenHeight) {
 }
 
 void Renderer::CleanupDevice() {
+#ifdef _DEBUG
+    ImGui_ImplDX11_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
+#endif
+
     camera.Release();
     scene.Release();
     if (g_pImmediateContext) g_pImmediateContext->ClearState();

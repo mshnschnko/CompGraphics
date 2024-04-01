@@ -1,3 +1,3 @@
 #define MAX_LIGHTS 15
-#define MAX_CUBES 6
-#define SCENE_SIZE 8
+#define MAX_CUBES 400
+#define SCENE_SIZE 30

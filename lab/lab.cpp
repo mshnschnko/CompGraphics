@@ -7,6 +7,10 @@
 #include "framework.h"
 #include "Renderer.h"
 
+#include "imgui/imgui.h"
+#include "imgui/imgui_impl_dx11.h"
+#include "imgui/imgui_impl_win32.h"
+
 
 constexpr int start_w = 1280;
 constexpr int start_h = 720;
@@ -14,6 +18,7 @@ constexpr int start_h = 720;
 HINSTANCE       g_hInst = nullptr;
 HWND            g_hWnd = nullptr;
 
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
@@ -86,6 +91,10 @@ int WINAPI wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, message, wParam, lParam))
+        return true;
+
     PAINTSTRUCT ps;
     HDC hdc;
 

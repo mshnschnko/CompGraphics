@@ -57,6 +57,8 @@ private:
 	Camera camera;
 	Scene scene;
 
+	bool m_useFrustumCulling;
+
 	UINT m_width;
 	UINT m_height;
 	bool m_rbPressed;

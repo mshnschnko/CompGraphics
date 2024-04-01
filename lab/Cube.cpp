@@ -397,7 +397,8 @@ bool Cube::IsInFrustum(float maxWidth, float maxHeight, float maxDepth, float mi
     return true;
 }
 
-bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix, XMFLOAT3& cameraPos, const Light& lights) {
+bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
+        XMFLOAT3& cameraPos, const Light& lights, bool useFrustumCulling) {
     auto duration = Timer::GetInstance().Clock();
     GeomBuffer geomBufferInst[MAX_CUBES];
     for (int i = 0; i < MAX_CUBES; i++) {
@@ -414,21 +415,27 @@ bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& p
 
     context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, &geomBufferInst, 0, 0);
 
-    GetFrustum(viewMatrix, projectionMatrix);
+    if (useFrustumCulling) {
+        GetFrustum(viewMatrix, projectionMatrix);
 
-    static const XMFLOAT4 AABB[] = {
-      {-0.5, -0.5, -0.5, 1.0},
-      {0.5,  0.5, 0.5, 1.0}
-    };
+        static const XMFLOAT4 AABB[] = {
+          {-0.5, -0.5, -0.5, 1.0},
+          {0.5,  0.5, 0.5, 1.0}
+        };
 
-    cubesIndexies.clear();
-    for (int i = 0; i < MAX_CUBES; i++) {
-        XMFLOAT4 min, max;
+        cubesIndexies.clear();
+        for (int i = 0; i < MAX_CUBES; i++) {
+            XMFLOAT4 min, max;
 
-        XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
-        XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
+            XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
+            XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
 
-        if (IsInFrustum(max.x, max.y, max.z, min.x, min.y, min.z))
+            if (IsInFrustum(max.x, max.y, max.z, min.x, min.y, min.z))
+                cubesIndexies.push_back(i);
+        }
+    }
+    else {
+        for (int i = 0; i < MAX_CUBES; i++)
             cubesIndexies.push_back(i);
     }
 

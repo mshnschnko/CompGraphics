@@ -30,7 +30,8 @@ public:
 
 	void Render(ID3D11DeviceContext* context);
 
-	bool Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix, XMFLOAT3& cameraPos, const Light& lights);
+	bool Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
+		XMFLOAT3& cameraPos, const Light& lights, bool useFrustumCulling);
 
 private:
 	void GetFrustum(XMMATRIX viewMatrix, XMMATRIX projectionMatrix);
