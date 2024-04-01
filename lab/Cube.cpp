@@ -398,7 +398,7 @@ bool Cube::IsInFrustum(float maxWidth, float maxHeight, float maxDepth, float mi
 }
 
 bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
-        XMFLOAT3& cameraPos, const Light& lights, bool useFrustumCulling) {
+        XMFLOAT3& cameraPos, const Light& lights, bool fixFrustumCulling) {
     auto duration = Timer::GetInstance().Clock();
     GeomBuffer geomBufferInst[MAX_CUBES];
     for (int i = 0; i < MAX_CUBES; i++) {
@@ -415,27 +415,23 @@ bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& p
 
     context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, &geomBufferInst, 0, 0);
 
-    if (useFrustumCulling) {
+    if (!fixFrustumCulling) {
         GetFrustum(viewMatrix, projectionMatrix);
-
-        static const XMFLOAT4 AABB[] = {
-          {-0.5, -0.5, -0.5, 1.0},
-          {0.5,  0.5, 0.5, 1.0}
-        };
-
-        cubesIndexies.clear();
-        for (int i = 0; i < MAX_CUBES; i++) {
-            XMFLOAT4 min, max;
-
-            XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
-            XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
-
-            if (IsInFrustum(max.x, max.y, max.z, min.x, min.y, min.z))
-                cubesIndexies.push_back(i);
-        }
     }
-    else {
-        for (int i = 0; i < MAX_CUBES; i++)
+
+    static const XMFLOAT4 AABB[] = {
+        {-0.5, -0.5, -0.5, 1.0},
+        {0.5,  0.5, 0.5, 1.0}
+    };
+
+    cubesIndexies.clear();
+    for (int i = 0; i < MAX_CUBES; i++) {
+        XMFLOAT4 min, max;
+
+        XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
+        XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
+
+        if (IsInFrustum(max.x, max.y, max.z, min.x, min.y, min.z))
             cubesIndexies.push_back(i);
     }
 

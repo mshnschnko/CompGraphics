@@ -192,7 +192,7 @@ HRESULT Renderer::InitBackBuffer() {
 HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT screenWidth, UINT screenHeight) {
     Resize(screenWidth, screenHeight);
 
-    m_useFrustumCulling = true;
+    m_fixFrustumCulling = false;
 
     m_rbPressed = false;
     m_prevMouseX = 0;
@@ -254,13 +254,13 @@ bool Renderer::Frame() {
     ImGui::NewFrame();
     {
         ImGui::Begin("FrustumCulling");
-        ImGui::Checkbox("Frustum Culling", &m_useFrustumCulling);
+        ImGui::Checkbox("Fix Frustum Culling", &m_fixFrustumCulling);
         ImGui::End();
     }
 #endif
 
     XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)m_width / (FLOAT)m_height, 100.0f, 0.01f);
-    HRESULT hr = scene.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos(), m_useFrustumCulling);
+    HRESULT hr = scene.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos(), m_fixFrustumCulling);
     if (FAILED(hr))
         return FAILED(hr);
 
