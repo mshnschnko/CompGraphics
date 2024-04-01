@@ -121,13 +121,14 @@ copy "$(ProjectDir)SkyboxVertexShader.cso" "$(OutDir)SkyboxVertexShader.cso"
 copy "$(ProjectDir)SkyboxPixelShader.cso" "$(OutDir)SkyboxPixelShader.cso"
 copy "$(ProjectDir)TransparentVertexShader.cso" "$(OutDir)TransparentVertexShader.cso"
 copy "$(ProjectDir)TransparentPixelShader.cso" "$(OutDir)TransparentPixelShader.cso"
+copy "$(ProjectDir)LightVertexShader.cso" "$(OutDir)LightVertexShader.cso"
+copy "$(ProjectDir)LightPixelShader.cso" "$(OutDir)LightPixelShader.cso"
 copy "$(ProjectDir)shrek1.dds" "$(OutDir)shrek1.dds"
+copy "$(ProjectDir)shrek1_1.dds" "$(OutDir)shrek1_1.dds"
 copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"
 copy "$(ProjectDir)skybox1.dds" "$(OutDir)skybox1.dds"
 copy "$(ProjectDir)196.dds" "$(OutDir)196.dds"
-copy "$(ProjectDir)196_norm.dds" "$(OutDir)196_norm.dds"
-copy "$(ProjectDir)LightVertexShader.cso" "$(OutDir)LightVertexShader.cso"
-copy "$(ProjectDir)LightPixelShader.cso" "$(OutDir)LightPixelShader.cso"</Command>
+copy "$(ProjectDir)196_norm.dds" "$(OutDir)196_norm.dds"</Command>
     </PostBuildEvent>
     <FxCompile>
       <AdditionalIncludeDirectories>D:\CompGraphics\lab</AdditionalIncludeDirectories>
@@ -155,6 +156,9 @@ copy "$(ProjectDir)LightPixelShader.cso" "$(OutDir)LightPixelShader.cso"</Comman
     <FxCompile>
       <AdditionalIncludeDirectories>D:\CompGraphics\lab</AdditionalIncludeDirectories>
       <ObjectFileOutput>$(ProjectDir)%(Filename).cso</ObjectFileOutput>
+      <ShaderModel>5.0</ShaderModel>
+      <DisableOptimizations>true</DisableOptimizations>
+      <EnableDebuggingInformation>true</EnableDebuggingInformation>
     </FxCompile>
     <PostBuildEvent>
       <Command>copy "$(ProjectDir)VertexShader.cso" "$(OutDir)VertexShader.cso"
@@ -163,19 +167,29 @@ copy "$(ProjectDir)SkyboxVertexShader.cso" "$(OutDir)SkyboxVertexShader.cso"
 copy "$(ProjectDir)SkyboxPixelShader.cso" "$(OutDir)SkyboxPixelShader.cso"
 copy "$(ProjectDir)TransparentVertexShader.cso" "$(OutDir)TransparentVertexShader.cso"
 copy "$(ProjectDir)TransparentPixelShader.cso" "$(OutDir)TransparentPixelShader.cso"
+copy "$(ProjectDir)LightVertexShader.cso" "$(OutDir)LightVertexShader.cso"
+copy "$(ProjectDir)LightPixelShader.cso" "$(OutDir)LightPixelShader.cso"
 copy "$(ProjectDir)shrek1.dds" "$(OutDir)shrek1.dds"
+copy "$(ProjectDir)shrek1_1.dds" "$(OutDir)shrek1_1.dds"
 copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"
 copy "$(ProjectDir)skybox1.dds" "$(OutDir)skybox1.dds"
 copy "$(ProjectDir)196.dds" "$(OutDir)196.dds"
-copy "$(ProjectDir)196_norm.dds" "$(OutDir)196_norm.dds"
-copy "$(ProjectDir)LightVertexShader.cso" "$(OutDir)LightVertexShader.cso"
-copy "$(ProjectDir)LightPixelShader.cso" "$(OutDir)LightPixelShader.cso"</Command>
+copy "$(ProjectDir)196_norm.dds" "$(OutDir)196_norm.dds"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Consts.h" />
     <ClInclude Include="Cube.h" />
     <ClInclude Include="DDSTextureLoader.h" />
+    <ClInclude Include="imgui\imconfig.h" />
+    <ClInclude Include="imgui\imgui.h" />
+    <ClInclude Include="imgui\imgui_impl_dx11.h" />
+    <ClInclude Include="imgui\imgui_impl_win32.h" />
+    <ClInclude Include="imgui\imgui_internal.h" />
+    <ClInclude Include="imgui\imstb_rectpack.h" />
+    <ClInclude Include="imgui\imstb_textedit.h" />
+    <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="structures.h" />
     <ClInclude Include="framework.h" />
@@ -193,6 +207,12 @@ copy "$(ProjectDir)LightPixelShader.cso" "$(OutDir)LightPixelShader.cso"</Comman
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="Cube.cpp" />
     <ClCompile Include="DDSTextureLoader.cpp" />
+    <ClCompile Include="imgui\imgui.cpp" />
+    <ClCompile Include="imgui\imgui_draw.cpp" />
+    <ClCompile Include="imgui\imgui_impl_dx11.cpp" />
+    <ClCompile Include="imgui\imgui_impl_win32.cpp" />
+    <ClCompile Include="imgui\imgui_tables.cpp" />
+    <ClCompile Include="imgui\imgui_widgets.cpp" />
     <ClCompile Include="lab.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Plane.cpp" />
@@ -260,7 +280,11 @@ copy "$(ProjectDir)LightPixelShader.cso" "$(OutDir)LightPixelShader.cso"</Comman
   </ItemGroup>
   <ItemGroup>
     <None Include="CalculateColor.hlsli" />
+    <None Include="CubeCB.hlsli" />
+    <None Include="LightBuffers.hlsli" />
+    <None Include="LightCB.hlsli" />
     <None Include="SceneCB.hlsli" />
+    <None Include="TransparentCB.hlsli" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
