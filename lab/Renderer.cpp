@@ -169,7 +169,7 @@ HRESULT Renderer::InitBackBuffer() {
     if (g_pDepthBufferDSV) g_pDepthBufferDSV->Release();
 
     D3D11_TEXTURE2D_DESC desc = {};
-    desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    desc.Format = DXGI_FORMAT_D32_FLOAT;
     desc.ArraySize = 1;
     desc.MipLevels = 1;
     desc.Usage = D3D11_USAGE_DEFAULT;
@@ -193,6 +193,7 @@ HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT sc
     Resize(screenWidth, screenHeight);
 
     m_fixFrustumCulling = false;
+    m_usePosteffect = false;
 
     m_rbPressed = false;
     m_prevMouseX = 0;
@@ -206,14 +207,20 @@ HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT sc
     if (FAILED(hr))
         return hr;
 
-#ifdef _DEBUG
+    hr = renderTexture.Init(g_pd3dDevice, screenWidth, screenHeight);
+    if (FAILED(hr))
+        return hr;
+
+    hr = postprocessing.Init(g_pd3dDevice, g_hWnd, screenWidth, screenHeight);
+    if (FAILED(hr))
+        return hr;
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui::StyleColorsDark();
     ImGui_ImplWin32_Init(g_hWnd);
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pImmediateContext);
-#endif
     
     return S_OK;
 }
@@ -243,21 +250,23 @@ void Renderer::MouseWheel(int wheel) {
 }
 
 bool Renderer::Frame() {
+    ImGui_ImplDX11_NewFrame();
+    ImGui_ImplWin32_NewFrame();
+    ImGui::NewFrame();
+    {
+        ImGui::Begin("ImGui");
+#ifdef _DEBUG
+        ImGui::Checkbox("Fix Frustum Culling", &m_fixFrustumCulling);
+#endif
+        ImGui::Checkbox("Sobel filter", &m_usePosteffect);
+        ImGui::End();
+    }
+    postprocessing.Frame(g_pImmediateContext, m_usePosteffect);
     camera.Frame();
 
     XMMATRIX mView;
     camera.GetBaseViewMatrix(mView);
 
-#ifdef _DEBUG
-    ImGui_ImplDX11_NewFrame();
-    ImGui_ImplWin32_NewFrame();
-    ImGui::NewFrame();
-    {
-        ImGui::Begin("FrustumCulling");
-        ImGui::Checkbox("Fix Frustum Culling", &m_fixFrustumCulling);
-        ImGui::End();
-    }
-#endif
 
     XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)m_width / (FLOAT)m_height, 100.0f, 0.01f);
     HRESULT hr = scene.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos(), m_fixFrustumCulling);
@@ -269,14 +278,6 @@ bool Renderer::Frame() {
 
 void Renderer::Render() {
     g_pImmediateContext->ClearState();
-
-    ID3D11RenderTargetView* views[] = { g_pRenderTargetView };
-    g_pImmediateContext->OMSetRenderTargets(1, views, g_pDepthBufferDSV);
-
-    float ClearColor[4] = { (float)0.19, (float)0.84, (float)0.78, (float)1.0 };
-
-    g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, ClearColor);
-    g_pImmediateContext->ClearDepthStencilView(g_pDepthBufferDSV, D3D11_CLEAR_DEPTH, 0.0f, 0);
 
     D3D11_VIEWPORT viewport;
     viewport.TopLeftX = 0;
@@ -294,12 +295,22 @@ void Renderer::Render() {
     rect.bottom = m_height;
     g_pImmediateContext->RSSetScissorRects(1, &rect);
 
+    renderTexture.SetRenderTarget(g_pImmediateContext, g_pDepthBufferDSV);
+    renderTexture.ClearRenderTarget(g_pImmediateContext, g_pDepthBufferDSV, 0.0f, 0.0f, 0.0f, 1.0f);
+
     scene.Render(g_pImmediateContext);
 
-#ifdef _DEBUG
+    ID3D11RenderTargetView* views[] = { g_pRenderTargetView };
+    g_pImmediateContext->OMSetRenderTargets(1, views, g_pDepthBufferDSV);
+
+    static const FLOAT BackColor[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+    g_pImmediateContext->ClearRenderTargetView(g_pRenderTargetView, BackColor);
+    g_pImmediateContext->ClearDepthStencilView(g_pDepthBufferDSV, D3D11_CLEAR_DEPTH, 0.0f, 0);
+
+    postprocessing.Render(g_pImmediateContext, renderTexture.GetShaderResourceView(), g_pRenderTargetView, viewport);
+
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-#endif
 
     g_pSwapChain->Present(0, 0);
 }
@@ -310,14 +321,14 @@ void Renderer::Resize(UINT screenWidth, UINT screenHeight) {
 }
 
 void Renderer::CleanupDevice() {
-#ifdef _DEBUG
     ImGui_ImplDX11_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
-#endif
 
     camera.Release();
     scene.Release();
+    renderTexture.Release();
+    postprocessing.Release();
     if (g_pImmediateContext) g_pImmediateContext->ClearState();
 
     if (g_pRenderTargetView) g_pRenderTargetView->Release();
@@ -349,6 +360,8 @@ void Renderer::ResizeWindow(const HWND& g_hWnd) {
             hr = InitBackBuffer();
             Resize(width, height);
             scene.Resize(width, height);
+            renderTexture.Resize(g_pd3dDevice, width, height);
+            postprocessing.Resize(width, height);
         }
     }
 }

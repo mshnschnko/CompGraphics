@@ -23,7 +23,7 @@ float4 main(PS_INPUT input) : SV_Target0
     input.tangent = normalize(input.tangent);
     input.normal = normalize(input.normal);
     
-    float3 ambient = ambientColor.xyz * tex.Sample(smplr, float3(input.uv, geomBuffers[input.instanceId].cubeParams.z)).xyz;
+    float3 ambient = 5.0 * ambientColor.xyz * tex.Sample(smplr, float3(input.uv, geomBuffers[input.instanceId].cubeParams.z)).xyz;
     
     float3 norm = float3(0.0f, 0.0f, 0.0f);
     if (geomBuffers[input.instanceId].cubeParams.w > 0.0f)

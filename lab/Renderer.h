@@ -7,10 +7,10 @@
 #include <directxmath.h>
 #include <ctime>
 
+#include "renderTexture.h"
+#include "postprocessing.h"
 #include "Camera.h"
-#include "texture.h"
 #include "scene.h"
-#include "skybox.h"
 
 
 class Renderer {
@@ -54,10 +54,14 @@ private:
 	ID3D11Texture2D* g_pDepthBuffer = nullptr;
 	ID3D11DepthStencilView* g_pDepthBufferDSV = nullptr;
 
+	RenderTexture renderTexture;
+	Postprocessing postprocessing;
+
 	Camera camera;
 	Scene scene;
 
 	bool m_fixFrustumCulling;
+	bool m_usePosteffect;
 
 	UINT m_width;
 	UINT m_height;
