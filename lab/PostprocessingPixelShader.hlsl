@@ -42,9 +42,7 @@ float4 main(PS_INPUT input) : SV_TARGET
                 y_color += sourceTexture.Sample(Sampler, input.tex + float2(i, j) / float2(params.y, params.z)).xyz * y_kernel[i + 1][j + 1];
             }
         }
-        x_color = float3(x_color.x * x_color.x, x_color.y * x_color.y, x_color.z * x_color.z);
-        y_color = float3(y_color.x * y_color.x, y_color.y * y_color.y, y_color.z * y_color.z);
-        color = sqrt(x_color + y_color);        
+        color = sqrt(x_color * x_color + y_color * y_color);
     }
     else
     {
