@@ -123,6 +123,8 @@ copy "$(ProjectDir)TransparentVertexShader.cso" "$(OutDir)TransparentVertexShade
 copy "$(ProjectDir)TransparentPixelShader.cso" "$(OutDir)TransparentPixelShader.cso"
 copy "$(ProjectDir)LightVertexShader.cso" "$(OutDir)LightVertexShader.cso"
 copy "$(ProjectDir)LightPixelShader.cso" "$(OutDir)LightPixelShader.cso"
+copy "$(ProjectDir)PostprocessingVertexShader.cso" "$(OutDir)PostprocessingVertexShader.cso"
+copy "$(ProjectDir)PostprocessingPixelShader.cso" "$(OutDir)PostprocessingPixelShader.cso"
 copy "$(ProjectDir)shrek1.dds" "$(OutDir)shrek1.dds"
 copy "$(ProjectDir)shrek1_1.dds" "$(OutDir)shrek1_1.dds"
 copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"
@@ -169,6 +171,8 @@ copy "$(ProjectDir)TransparentVertexShader.cso" "$(OutDir)TransparentVertexShade
 copy "$(ProjectDir)TransparentPixelShader.cso" "$(OutDir)TransparentPixelShader.cso"
 copy "$(ProjectDir)LightVertexShader.cso" "$(OutDir)LightVertexShader.cso"
 copy "$(ProjectDir)LightPixelShader.cso" "$(OutDir)LightPixelShader.cso"
+copy "$(ProjectDir)PostprocessingVertexShader.cso" "$(OutDir)PostprocessingVertexShader.cso"
+copy "$(ProjectDir)PostprocessingPixelShader.cso" "$(OutDir)PostprocessingPixelShader.cso"
 copy "$(ProjectDir)shrek1.dds" "$(OutDir)shrek1.dds"
 copy "$(ProjectDir)shrek1_1.dds" "$(OutDir)shrek1_1.dds"
 copy "$(ProjectDir)shrek2.dds" "$(OutDir)shrek2.dds"
@@ -191,6 +195,8 @@ copy "$(ProjectDir)196_norm.dds" "$(OutDir)196_norm.dds"</Command>
     <ClInclude Include="imgui\imstb_textedit.h" />
     <ClInclude Include="imgui\imstb_truetype.h" />
     <ClInclude Include="Light.h" />
+    <ClInclude Include="Postprocessing.h" />
+    <ClInclude Include="RenderTexture.h" />
     <ClInclude Include="structures.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="lab.h" />
@@ -216,7 +222,9 @@ copy "$(ProjectDir)196_norm.dds" "$(OutDir)196_norm.dds"</Command>
     <ClCompile Include="lab.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Plane.cpp" />
+    <ClCompile Include="Postprocessing.cpp" />
     <ClCompile Include="Renderer.cpp" />
+    <ClCompile Include="RenderTexture.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="skybox.cpp" />
     <ClCompile Include="texture.cpp" />
@@ -246,6 +254,18 @@ copy "$(ProjectDir)196_norm.dds" "$(OutDir)196_norm.dds"</Command>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="PostprocessingPixelShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="PostprocessingVertexShader.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="SkyboxPixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
