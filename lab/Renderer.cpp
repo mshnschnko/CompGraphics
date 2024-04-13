@@ -255,12 +255,14 @@ bool Renderer::Frame() {
     ImGui::NewFrame();
     {
         ImGui::Begin("ImGui");
+        ImGui::Text(("The count of rendered cubes: " + std::to_string(scene.GetRenderedCount())).c_str());
 #ifdef _DEBUG
         ImGui::Checkbox("Fix Frustum Culling", &m_fixFrustumCulling);
 #endif
         ImGui::Checkbox("Sobel filter", &m_usePosteffect);
         ImGui::End();
     }
+
     postprocessing.Frame(g_pImmediateContext, m_usePosteffect);
     camera.Frame();
 

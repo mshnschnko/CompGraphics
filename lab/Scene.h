@@ -1,5 +1,6 @@
 #pragma once
 
+#include <windows.h>
 #include <d3dcompiler.h>
 #include <dxgi.h>
 #include <d3d11.h>
@@ -28,6 +29,8 @@ public:
 
     bool Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos, bool fixFrustumCulling);
 
+
+    int GetRenderedCount() { return cube.GetRenderedCubesCount(); };
 private:
     bool FramePlanes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos);
 
