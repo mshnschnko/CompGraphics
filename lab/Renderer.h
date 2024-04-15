@@ -6,6 +6,7 @@
 #include <directxcolors.h>
 #include <directxmath.h>
 #include <ctime>
+#include <chrono>
 
 #include "renderTexture.h"
 #include "postprocessing.h"
@@ -62,6 +63,13 @@ private:
 
 	bool m_fixFrustumCulling;
 	bool m_usePosteffect;
+	const char* m_modes[3];
+	int m_currentMode = 0;
+
+	long long m_totalFrameTime[3]; // 0 - CPU mode, 1 - instancing, 2 - GPU culling + instancing
+	long long m_totalRenderTime[3];
+	int m_frameCount[3]; // Frame count for every draw mode
+
 
 	UINT m_width;
 	UINT m_height;

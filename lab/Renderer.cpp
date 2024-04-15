@@ -199,6 +199,22 @@ HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT sc
     m_prevMouseX = 0;
     m_prevMouseY = 0;
 
+    m_modes[0] = "CPU";
+    m_modes[1] = "Instancing";
+    m_modes[2] = "GPU Culling + Instancing";
+
+    m_totalFrameTime[0] = 0;
+    m_totalFrameTime[1] = 0;
+    m_totalFrameTime[2] = 0;
+
+    m_totalRenderTime[0] = 0;
+    m_totalRenderTime[1] = 0;
+    m_totalRenderTime[2] = 0;
+
+    m_frameCount[0] = 0;
+    m_frameCount[1] = 0;
+    m_frameCount[2] = 0;
+
     HRESULT hr = camera.Init();
     if (FAILED(hr))
         return hr;
@@ -260,9 +276,16 @@ bool Renderer::Frame() {
         ImGui::Checkbox("Fix Frustum Culling", &m_fixFrustumCulling);
 #endif
         ImGui::Checkbox("Sobel filter", &m_usePosteffect);
+        ImGui::Combo("Draw mode", &m_currentMode, m_modes, IM_ARRAYSIZE(m_modes));
+        if (m_frameCount[m_currentMode]) {
+            ImGui::Text((std::string(m_modes[m_currentMode]) + " average frame time: " + std::to_string(m_totalFrameTime[m_currentMode] / m_frameCount[m_currentMode])).c_str());
+            ImGui::Text((std::string(m_modes[m_currentMode]) + " average render time: " + std::to_string(m_totalRenderTime[m_currentMode] / m_frameCount[m_currentMode])).c_str());
+        }
+        ImGui::Text(m_modes[m_currentMode]);
+        ImGui::Text(std::to_string(m_frameCount[m_currentMode]).c_str());
         ImGui::End();
     }
-
+    auto start = std::chrono::high_resolution_clock::now();
     postprocessing.Frame(g_pImmediateContext, m_usePosteffect);
     camera.Frame();
 
@@ -272,6 +295,9 @@ bool Renderer::Frame() {
 
     XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)m_width / (FLOAT)m_height, 100.0f, 0.01f);
     HRESULT hr = scene.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos(), m_fixFrustumCulling);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    m_totalFrameTime[m_currentMode] += duration.count();
     if (FAILED(hr))
         return FAILED(hr);
 
@@ -279,6 +305,7 @@ bool Renderer::Frame() {
 }
 
 void Renderer::Render() {
+    auto start = std::chrono::high_resolution_clock::now();
     g_pImmediateContext->ClearState();
 
     D3D11_VIEWPORT viewport;
@@ -315,6 +342,10 @@ void Renderer::Render() {
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
     g_pSwapChain->Present(0, 0);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    m_totalRenderTime[m_currentMode] += duration.count();
+    m_frameCount[m_currentMode]++;
 }
 
 void Renderer::Resize(UINT screenWidth, UINT screenHeight) {
