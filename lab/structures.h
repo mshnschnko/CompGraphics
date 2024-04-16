@@ -67,3 +67,9 @@ struct SBSceneMatrixBuffer {
 	XMMATRIX viewProjectionMatrix;
 	XMFLOAT4 cameraPos;
 };
+
+enum DrawMode {
+	CPU = 0,
+	Instancing,
+	GPU
+};

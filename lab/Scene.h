@@ -25,9 +25,9 @@ public:
 
     void Resize(int screenWidth, int screenHeight);
 
-    void Render(ID3D11DeviceContext* context);
+    void Render(ID3D11DeviceContext* context, int drawMode);
 
-    bool Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos, bool fixFrustumCulling);
+    bool Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos, bool fixFrustumCulling, int drawMode);
 
 
     int GetRenderedCount() { return cube.GetRenderedCubesCount(); };

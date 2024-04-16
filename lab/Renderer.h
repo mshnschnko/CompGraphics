@@ -64,11 +64,14 @@ private:
 	bool m_fixFrustumCulling;
 	bool m_usePosteffect;
 	const char* m_modes[3];
-	int m_currentMode = 0;
+	int m_currentMode = 1;
 
 	long long m_totalFrameTime[3]; // 0 - CPU mode, 1 - instancing, 2 - GPU culling + instancing
 	long long m_totalRenderTime[3];
 	int m_frameCount[3]; // Frame count for every draw mode
+
+	long long lastFrameTime = 0;
+	long long lastRenderTime = 0;
 
 
 	UINT m_width;
