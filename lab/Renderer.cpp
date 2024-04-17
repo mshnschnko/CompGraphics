@@ -278,13 +278,12 @@ bool Renderer::Frame() {
         ImGui::Checkbox("Sobel filter", &m_usePosteffect);
         ImGui::Combo("Draw mode", &m_currentMode, m_modes, IM_ARRAYSIZE(m_modes));
         if (m_frameCount[m_currentMode]) {
-            ImGui::Text((std::string(m_modes[m_currentMode]) + " average frame time: " + std::to_string((double)(m_totalFrameTime[m_currentMode]) / (double)(m_frameCount[m_currentMode]) / 1000000.0)).c_str());
-            ImGui::Text((std::string(m_modes[m_currentMode]) + " average render time: " + std::to_string((double)(m_totalRenderTime[m_currentMode]) / (double)(m_frameCount[m_currentMode]) / 1000000.0)).c_str());
+            ImGui::Text((std::string(m_modes[m_currentMode]) + " average frame time: " + std::to_string((double)(m_totalFrameTime[m_currentMode]) / (double)(m_frameCount[m_currentMode] - 100) / 1000000.0)).c_str());
+            ImGui::Text((std::string(m_modes[m_currentMode]) + " average render time: " + std::to_string((double)(m_totalRenderTime[m_currentMode]) / (double)(m_frameCount[m_currentMode] - 100) / 1000000.0)).c_str());
+            ImGui::Text(std::to_string(m_frameCount[m_currentMode]).c_str());
+            ImGui::Text(("last frame time: " + std::to_string((double)lastFrameTime / 1000000.0)).c_str());
+            ImGui::Text(("last render time: " + std::to_string((double)lastRenderTime / 1000000.0)).c_str());
         }
-        ImGui::Text(m_modes[m_currentMode]);
-        ImGui::Text(std::to_string(m_frameCount[m_currentMode]).c_str());
-        ImGui::Text(("last frame time: " + std::to_string((double)lastFrameTime / 1000000.0)).c_str());
-        ImGui::Text(("last render time: " + std::to_string((double)lastFrameTime / 1000000.0)).c_str());
         ImGui::End();
     }
     auto start = std::chrono::high_resolution_clock::now();
@@ -300,7 +299,8 @@ bool Renderer::Frame() {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     lastFrameTime = duration.count();
-    m_totalFrameTime[m_currentMode] += duration.count();
+    if (m_frameCount[m_currentMode] > 100 && m_frameCount[m_currentMode] < 1100)
+        m_totalFrameTime[m_currentMode] += duration.count();
     if (FAILED(hr))
         return FAILED(hr);
 
@@ -348,8 +348,11 @@ void Renderer::Render() {
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     lastRenderTime = duration.count();
-    m_totalRenderTime[m_currentMode] += duration.count();
-    m_frameCount[m_currentMode]++;
+    if (m_frameCount[m_currentMode] < 1100) {
+        if (m_frameCount[m_currentMode] > 100)
+            m_totalRenderTime[m_currentMode] += duration.count();
+        m_frameCount[m_currentMode]++;
+    }
 }
 
 void Renderer::Resize(UINT screenWidth, UINT screenHeight) {

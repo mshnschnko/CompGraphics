@@ -76,7 +76,6 @@ private:
 
 	std::vector<Texture> cubesTextures;
 	std::vector<CubeModel> cubesModelVector;
-	std::vector<int> cubesIndexies;
 	std::vector<GeomBuffer> geomBufferInst = std::vector<GeomBuffer>(MAX_CUBES);
 
 	Frustum frustum;

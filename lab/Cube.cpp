@@ -472,7 +472,8 @@ void Cube::Render(ID3D11DeviceContext* context, int drawMode) {
         context->PSSetConstantBuffers(2, 1, &g_LightConstantBuffer);
 
         for (auto& geomBuffer : geomBufferInst) {
-            context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
+            geomBufferInst[0] = geomBuffer;
+            context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, geomBufferInst.data(), 0, 0);
             context->VSSetShaderResources(10, 1, &g_pGeomBufferView);
             context->PSSetShaderResources(10, 1, &g_pGeomBufferView);
             //context->VSSetConstantBuffers(0, 1, &g_pTmpGeomBuffer);
@@ -566,7 +567,7 @@ void Cube::Render(ID3D11DeviceContext* context, int drawMode) {
         context->End(queries[curFrame % MAX_QUERY]);
         curFrame++;
         context->VSSetShaderResources(11, 1, noResources);
-        ReadQueries(context);
+        //ReadQueries(context);
         return;
     }
 }
@@ -673,10 +674,6 @@ bool Cube::FrameCPU(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX
     }
 
     context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, geomBufferInst.data(), 0, 0);
-    cubesIndexies.clear();
-    for (int i = 0; i < MAX_CUBES; i++) {
-        cubesIndexies.push_back(i);
-    }
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
@@ -730,10 +727,6 @@ bool Cube::FrameInstancing(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, X
     }
 
     context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, geomBufferInst.data(), 0, 0);
-    cubesIndexies.clear();
-    for (int i = 0; i < MAX_CUBES; i++) {
-        cubesIndexies.push_back(i);
-    }
 
     D3D11_MAPPED_SUBRESOURCE subresource;
     HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
@@ -858,14 +851,11 @@ bool Cube::FrameGPUCulling(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, X
         {0.5,  0.5, 0.5, 1.0}
     };
 
-    cubesIndexies.clear();
     for (int i = 0; i < MAX_CUBES; i++) {
         XMFLOAT4 min, max;
 
         XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
         XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
-
-        cubesIndexies.push_back(i);
 
         cullingBoxes[i].bbMin = min;
         cullingBoxes[i].bbMax = max;
