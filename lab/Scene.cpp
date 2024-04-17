@@ -49,8 +49,8 @@ void Scene::Release() {
     lights.Release();
 }
 
-void Scene::Render(ID3D11DeviceContext* context) {
-    cube.Render(context);
+void Scene::Render(ID3D11DeviceContext* context, int drawMode) {
+    cube.Render(context, drawMode);
     lights.Render(context);
     skybox.Render(context);
     planes.Render(context);
@@ -69,8 +69,8 @@ bool Scene::FramePlanes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMAT
     return failed;
 }
 
-bool Scene::Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos, bool fixFrustumCulling) {
-    bool failed = cube.Frame(context, viewMatrix, projectionMatrix, cameraPos, lights, fixFrustumCulling);
+bool Scene::Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos, bool fixFrustumCulling, int drawMode) {
+    bool failed = cube.Frame(context, viewMatrix, projectionMatrix, cameraPos, lights, fixFrustumCulling, drawMode);
     if (failed)
         return false;
 

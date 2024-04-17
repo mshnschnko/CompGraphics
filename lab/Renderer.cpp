@@ -98,6 +98,7 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
         sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
         sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
         sd.BufferCount = 2;
+        sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
         hr = dxgiFactory2->CreateSwapChainForHwnd(g_pd3dDevice, g_hWnd, &sd, nullptr, nullptr, &g_pSwapChain1);
         if (SUCCEEDED(hr))
@@ -123,6 +124,7 @@ HRESULT Renderer::InitDevice(const HWND& g_hWnd) {
         sd.SampleDesc.Quality = 0;
         sd.SwapEffect = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
         sd.Windowed = TRUE;
+        sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
         hr = dxgiFactory->CreateSwapChain(g_pd3dDevice, &sd, &g_pSwapChain);
     }
@@ -199,6 +201,22 @@ HRESULT Renderer::Init(const HWND& g_hWnd, const HINSTANCE& g_hInstance, UINT sc
     m_prevMouseX = 0;
     m_prevMouseY = 0;
 
+    m_modes[0] = "CPU";
+    m_modes[1] = "Instancing";
+    m_modes[2] = "GPU Culling + Instancing";
+
+    m_totalFrameTime[0] = 0;
+    m_totalFrameTime[1] = 0;
+    m_totalFrameTime[2] = 0;
+
+    m_totalRenderTime[0] = 0;
+    m_totalRenderTime[1] = 0;
+    m_totalRenderTime[2] = 0;
+
+    m_frameCount[0] = 0;
+    m_frameCount[1] = 0;
+    m_frameCount[2] = 0;
+
     HRESULT hr = camera.Init();
     if (FAILED(hr))
         return hr;
@@ -255,12 +273,22 @@ bool Renderer::Frame() {
     ImGui::NewFrame();
     {
         ImGui::Begin("ImGui");
+        ImGui::Text(("The count of rendered cubes: " + std::to_string(scene.GetRenderedCount())).c_str());
 #ifdef _DEBUG
         ImGui::Checkbox("Fix Frustum Culling", &m_fixFrustumCulling);
 #endif
         ImGui::Checkbox("Sobel filter", &m_usePosteffect);
+        ImGui::Combo("Draw mode", &m_currentMode, m_modes, IM_ARRAYSIZE(m_modes));
+        if (m_frameCount[m_currentMode]) {
+            ImGui::Text((std::string(m_modes[m_currentMode]) + " average frame time: " + std::to_string((double)(m_totalFrameTime[m_currentMode]) / (double)(m_frameCount[m_currentMode] - 100) / 1000000.0)).c_str());
+            ImGui::Text((std::string(m_modes[m_currentMode]) + " average render time: " + std::to_string((double)(m_totalRenderTime[m_currentMode]) / (double)(m_frameCount[m_currentMode] - 100) / 1000000.0)).c_str());
+            ImGui::Text(std::to_string(m_frameCount[m_currentMode]).c_str());
+            ImGui::Text(("last frame time: " + std::to_string((double)lastFrameTime / 1000000.0)).c_str());
+            ImGui::Text(("last render time: " + std::to_string((double)lastRenderTime / 1000000.0)).c_str());
+        }
         ImGui::End();
     }
+    auto start = std::chrono::high_resolution_clock::now();
     postprocessing.Frame(g_pImmediateContext, m_usePosteffect);
     camera.Frame();
 
@@ -269,7 +297,12 @@ bool Renderer::Frame() {
 
 
     XMMATRIX mProjection = XMMatrixPerspectiveFovLH(XM_PIDIV2, (FLOAT)m_width / (FLOAT)m_height, 100.0f, 0.01f);
-    HRESULT hr = scene.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos(), m_fixFrustumCulling);
+    HRESULT hr = scene.Frame(g_pImmediateContext, mView, mProjection, camera.GetPos(), m_fixFrustumCulling, m_currentMode);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    lastFrameTime = duration.count();
+    if (m_frameCount[m_currentMode] > 100 && m_frameCount[m_currentMode] < 1100)
+        m_totalFrameTime[m_currentMode] += duration.count();
     if (FAILED(hr))
         return FAILED(hr);
 
@@ -277,6 +310,7 @@ bool Renderer::Frame() {
 }
 
 void Renderer::Render() {
+    auto start = std::chrono::high_resolution_clock::now();
     g_pImmediateContext->ClearState();
 
     D3D11_VIEWPORT viewport;
@@ -298,7 +332,7 @@ void Renderer::Render() {
     renderTexture.SetRenderTarget(g_pImmediateContext, g_pDepthBufferDSV);
     renderTexture.ClearRenderTarget(g_pImmediateContext, g_pDepthBufferDSV, 0.0f, 0.0f, 0.0f, 1.0f);
 
-    scene.Render(g_pImmediateContext);
+    scene.Render(g_pImmediateContext, m_currentMode);
 
     ID3D11RenderTargetView* views[] = { g_pRenderTargetView };
     g_pImmediateContext->OMSetRenderTargets(1, views, g_pDepthBufferDSV);
@@ -312,7 +346,15 @@ void Renderer::Render() {
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-    g_pSwapChain->Present(0, 0);
+    g_pSwapChain->Present(0, DXGI_PRESENT_ALLOW_TEARING);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+    lastRenderTime = duration.count();
+    if (m_frameCount[m_currentMode] < 1100) {
+        if (m_frameCount[m_currentMode] > 100)
+            m_totalRenderTime[m_currentMode] += duration.count();
+        m_frameCount[m_currentMode]++;
+    }
 }
 
 void Renderer::Resize(UINT screenWidth, UINT screenHeight) {

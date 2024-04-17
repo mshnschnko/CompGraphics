@@ -1,5 +1,6 @@
 #pragma once
 
+#include <windows.h>
 #include <d3dcompiler.h>
 #include <dxgi.h>
 #include <d3d11.h>
@@ -24,10 +25,12 @@ public:
 
     void Resize(int screenWidth, int screenHeight);
 
-    void Render(ID3D11DeviceContext* context);
+    void Render(ID3D11DeviceContext* context, int drawMode);
 
-    bool Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos, bool fixFrustumCulling);
+    bool Frame(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos, bool fixFrustumCulling, int drawMode);
 
+
+    int GetRenderedCount() { return cube.GetRenderedCubesCount(); };
 private:
     bool FramePlanes(ID3D11DeviceContext* context, XMMATRIX viewMatrix, XMMATRIX projectionMatrix, XMFLOAT3 cameraPos);
 

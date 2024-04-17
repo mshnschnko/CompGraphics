@@ -180,6 +180,7 @@
     <FxCompile Include="LightVertexShader.hlsl" />
     <FxCompile Include="PostprocessingPixelShader.hlsl" />
     <FxCompile Include="PostprocessingVertexShader.hlsl" />
+    <FxCompile Include="FrustumComputeShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="SceneCB.hlsli" />

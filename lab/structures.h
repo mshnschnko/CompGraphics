@@ -17,7 +17,17 @@ struct SceneMatrixBuffer {
 
 struct CubeSceneMatrixBuffer {
 	XMMATRIX viewProjectionMatrix;
-	XMINT4 indexBuffer[MAX_CUBES];
+	XMFLOAT4 planes[6];
+	XMINT4 drawMode; // x - current draw mode
+};
+
+struct CullingParams {
+	XMINT4 numShapes; // x - objects count;
+};
+
+struct CullingBoundBox {
+	XMFLOAT4 bbMin;
+	XMFLOAT4 bbMax;
 };
 
 struct GeomBuffer {
@@ -60,4 +70,10 @@ struct SBWorldMatrixBuffer {
 struct SBSceneMatrixBuffer {
 	XMMATRIX viewProjectionMatrix;
 	XMFLOAT4 cameraPos;
+};
+
+enum DrawMode {
+	CPU = 0,
+	Instancing,
+	GPU
 };
