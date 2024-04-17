@@ -326,17 +326,6 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     if (FAILED(hr))
       return hr;
 
-    D3D11_BUFFER_DESC descTGB;
-    ZeroMemory(&descTGB, sizeof(descTGB));
-    descTGB.ByteWidth = sizeof(GeomBuffer);
-    descTGB.Usage = D3D11_USAGE_DYNAMIC;
-    descTGB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    descTGB.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-    hr = device->CreateBuffer(&descTGB, nullptr, &g_pTmpGeomBuffer);
-    if (FAILED(hr))
-        return hr;
-
     D3D11_BUFFER_DESC descSMB = {};
     descSMB.ByteWidth = sizeof(CubeSceneMatrixBuffer);
     descSMB.Usage = D3D11_USAGE_DYNAMIC;
@@ -478,7 +467,7 @@ void Cube::Render(ID3D11DeviceContext* context, int drawMode) {
         //context->VSSetConstantBuffers(2, 1, &g_pGeomBufferInstVis);
 
         context->PSSetShader(g_pPixelShader, nullptr, 0);
-        context->PSSetShaderResources(10, 1, &g_pGeomBufferView);
+        //context->PSSetShaderResources(10, 1, &g_pGeomBufferView);
         context->PSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
         context->PSSetConstantBuffers(2, 1, &g_LightConstantBuffer);
 
@@ -846,7 +835,7 @@ bool Cube::FrameGPUCulling(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, X
     CullingParams cullingParams;
     auto duration = Timer::GetInstance().Clock();
     //std::vector<GeomBuffer> geomBufferInst = std::vector<GeomBuffer>(MAX_CUBES);
-    std::vector<CullingBoundBox> cullingBoxes = std::vector<CullingBoundBox>(MAX_CUBES);
+    static std::vector<CullingBoundBox> cullingBoxes = std::vector<CullingBoundBox>(MAX_CUBES);
     for (int i = 0; i < MAX_CUBES; i++) {
         geomBufferInst[i].worldMatrix =
             XMMatrixRotationX((float)duration * cubesModelVector[i].params.x * 0.01f) *

@@ -65,7 +65,7 @@ private:
 	ID3D11SamplerState* g_pSamplerState = nullptr;
 	ID3D11DepthStencilState* g_pDepthState = nullptr;
 
-	ID3D11Buffer* g_pTmpGeomBuffer = nullptr;
+	//ID3D11Buffer* g_pTmpGeomBuffer = nullptr;
 
 	ID3D11Buffer* g_pInderectArgsSrc = nullptr;
 	ID3D11Buffer* g_pInderectArgs = nullptr;
