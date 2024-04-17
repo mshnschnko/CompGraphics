@@ -7,18 +7,12 @@ struct CubeGeomBuffer
     float4 cubeParams;
 };
 
-cbuffer CubeGeomBuffers : register(b0)
-{
-    CubeGeomBuffer geomBuffers[MAX_CUBES];
-};
+StructuredBuffer<CubeGeomBuffer> geomBuffers : register(t10);
+StructuredBuffer<uint4> objectID : register(t11);
 
 cbuffer SceneCB : register(b1)
 {
     float4x4 viewProjectionMatrix;
     float4 planes[6];
+    int4 drawMode; // x - current mode
 };
-
-cbuffer IndexBuffer : register(b2)
-{
-    uint4 objectID[MAX_CUBES];
-}

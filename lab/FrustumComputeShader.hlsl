@@ -1,11 +1,22 @@
 #include "CubeCB.hlsli"
 
+#ifdef MAX_CUBES
+#undef MAX_CUBES
+#endif
+#define MAX_CUBES 450
+
+struct BoundBox
+{
+  float4 bbMin;
+  float4 bbMax;
+};
+
 cbuffer CullingParams : register(b0)
 {
     uint4 numShapes;
-    float4 bbMin[MAX_CUBES];
-    float4 bbMax[MAX_CUBES];
 }
+
+StructuredBuffer<BoundBox> boxes : register(t9);
 
 RWStructuredBuffer<uint> indirectArgs : register(u0);
 RWStructuredBuffer<uint4> objectsIds : register(u1);
@@ -37,7 +48,7 @@ void main(uint3 globalThreadId : SV_DispatchThreadID)
     {
         return;
     }
-    if (IsInFrustum(planes, bbMin[globalThreadId.x].xyz, bbMax[globalThreadId.x].xyz))
+    if (IsInFrustum(planes, boxes[globalThreadId.x].bbMin.xyz, boxes[globalThreadId.x].bbMax.xyz))
     {
         uint id = 0;
         InterlockedAdd(indirectArgs[1], 1, id);

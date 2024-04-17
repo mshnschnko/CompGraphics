@@ -33,6 +33,13 @@ public:
 	bool Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
 		XMFLOAT3& cameraPos, const Light& lights, bool fixFrustumCulling, int drawMode);
 
+	bool FrameCPU(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
+		XMFLOAT3& cameraPos, const Light& lights);
+	bool FrameInstancing(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
+		XMFLOAT3& cameraPos, const Light& lights);
+	bool FrameGPUCulling(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
+		XMFLOAT3& cameraPos, const Light& lights, bool fixFrustumCulling);
+
 	int GetRenderedCubesCount() { return countOfRenderedCubes; };
 
 private:
@@ -48,23 +55,29 @@ private:
 	ID3D11Buffer* g_pVertexBuffer = nullptr;
 	ID3D11Buffer* g_pIndexBuffer = nullptr;
 	ID3D11Buffer* g_pGeomBuffer = nullptr;
+	ID3D11ShaderResourceView* g_pGeomBufferView = nullptr;
 	ID3D11Buffer* g_pCullingParams = nullptr;
+	ID3D11Buffer* g_pCullingBoundBoxes = nullptr;
+	ID3D11ShaderResourceView* g_pCullingBoundBoxesView = nullptr;
 	ID3D11Buffer* g_LightConstantBuffer = nullptr;
 	ID3D11Buffer* g_pSceneMatrixBuffer = nullptr;
 	ID3D11RasterizerState* g_pRasterizerState = nullptr;
 	ID3D11SamplerState* g_pSamplerState = nullptr;
 	ID3D11DepthStencilState* g_pDepthState = nullptr;
 
+	ID3D11Buffer* g_pTmpGeomBuffer = nullptr;
+
 	ID3D11Buffer* g_pInderectArgsSrc = nullptr;
 	ID3D11Buffer* g_pInderectArgs = nullptr;
 	ID3D11UnorderedAccessView* g_pInderectArgsUAV = nullptr;
-	ID3D11Buffer* g_pGeomBufferInstVis = nullptr;
 	ID3D11Buffer* g_pGeomBufferInstVisGpu = nullptr;
 	ID3D11UnorderedAccessView* g_pGeomBufferInstVisGpu_UAV = nullptr;
+	ID3D11ShaderResourceView* g_pGeomBufferInstVisGpu_SRV = nullptr;
 
 	std::vector<Texture> cubesTextures;
 	std::vector<CubeModel> cubesModelVector;
 	std::vector<int> cubesIndexies;
+	std::vector<GeomBuffer> geomBufferInst = std::vector<GeomBuffer>(MAX_CUBES);
 
 	Frustum frustum;
 	float angle_velocity = XM_PIDIV2;

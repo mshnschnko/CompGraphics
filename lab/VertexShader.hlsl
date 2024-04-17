@@ -23,8 +23,21 @@ struct PS_INPUT
 PS_INPUT main(VS_INPUT input)
 {
     PS_INPUT output;
-
-    unsigned int idx = objectID[input.instanceId].x;
+    unsigned int idx = 0;
+    switch (drawMode.x)
+    {
+        case 0:
+            break;
+        case 1:
+            idx = input.instanceId;
+            break;
+        case 2:
+            idx = objectID[input.instanceId].x;
+            break;
+    }
+    //unsigned int idx = objectID[input.instanceId].x;
+    // in case of Instancing mode just 
+    // unsigned int idx = input.instanceId;
     output.worldPos = mul(geomBuffers[idx].worldMatrix, float4(input.position, 1.0f));
     output.position = mul(viewProjectionMatrix, output.worldPos);
     output.normal = mul(geomBuffers[idx].norm, float4(input.normal, 0.0f)).xyz;

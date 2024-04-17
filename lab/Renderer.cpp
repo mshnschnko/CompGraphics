@@ -279,12 +279,12 @@ bool Renderer::Frame() {
         ImGui::Combo("Draw mode", &m_currentMode, m_modes, IM_ARRAYSIZE(m_modes));
         if (m_frameCount[m_currentMode]) {
             ImGui::Text((std::string(m_modes[m_currentMode]) + " average frame time: " + std::to_string((double)(m_totalFrameTime[m_currentMode]) / (double)(m_frameCount[m_currentMode]) / 1000000.0)).c_str());
-            ImGui::Text((std::string(m_modes[m_currentMode]) + " average render time: " + std::to_string((double)(m_totalRenderTime[m_currentMode]) / (double)(m_frameCount[m_currentMode]))).c_str());
+            ImGui::Text((std::string(m_modes[m_currentMode]) + " average render time: " + std::to_string((double)(m_totalRenderTime[m_currentMode]) / (double)(m_frameCount[m_currentMode]) / 1000000.0)).c_str());
         }
         ImGui::Text(m_modes[m_currentMode]);
         ImGui::Text(std::to_string(m_frameCount[m_currentMode]).c_str());
         ImGui::Text(("last frame time: " + std::to_string((double)lastFrameTime / 1000000.0)).c_str());
-        ImGui::Text(("last render time: " + std::to_string(lastRenderTime)).c_str());
+        ImGui::Text(("last render time: " + std::to_string((double)lastFrameTime / 1000000.0)).c_str());
         ImGui::End();
     }
     auto start = std::chrono::high_resolution_clock::now();
@@ -346,7 +346,7 @@ void Renderer::Render() {
 
     g_pSwapChain->Present(0, 0);
     auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
     lastRenderTime = duration.count();
     m_totalRenderTime[m_currentMode] += duration.count();
     m_frameCount[m_currentMode]++;

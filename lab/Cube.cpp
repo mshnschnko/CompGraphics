@@ -16,6 +16,7 @@ void Cube::ReadQueries(ID3D11DeviceContext* context) {
     }
 }
 
+
 HRESULT Cube::InitQuery(ID3D11Device* device) {
     HRESULT hr = S_OK;
     D3D11_QUERY_DESC desc;
@@ -28,9 +29,9 @@ HRESULT Cube::InitQuery(ID3D11Device* device) {
     return hr;
 }
 
+
 HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int screenWidth, int screenHeight,
     std::vector<const wchar_t*> diffPaths, const wchar_t* normalPath, float shines, const std::vector<XMFLOAT4>& positions) {
-    assert(positions.size() == MAX_CUBES);
     InitQuery(device);
 
     frustum.screenDepth = 0.1f;
@@ -185,17 +186,18 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     D3D11_BUFFER_DESC descWMB = {};
     descWMB.ByteWidth = sizeof(GeomBuffer) * MAX_CUBES;
     descWMB.Usage = D3D11_USAGE_DEFAULT;
-    descWMB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    descWMB.BindFlags = D3D11_BIND_SHADER_RESOURCE;
     descWMB.CPUAccessFlags = 0;
-    descWMB.MiscFlags = 0;
-    descWMB.StructureByteStride = 0;
+    descWMB.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+    descWMB.StructureByteStride = sizeof(GeomBuffer);
 
     static const XMFLOAT4 AABB[] = {
         {-0.5, -0.5, -0.5, 1.0},
         {0.5,  0.5, 0.5, 1.0}
     };
-    GeomBuffer geomBufferInst[MAX_CUBES];
+    std::vector<GeomBuffer> geomBufferInst = std::vector<GeomBuffer>(MAX_CUBES);
     CullingParams cullingParams;
+    std::vector<CullingBoundBox> boundBoxesInst = std::vector<CullingBoundBox>(MAX_CUBES);
     for (int i = 0; i < MAX_CUBES; i++) {
         geomBufferInst[i].worldMatrix = XMMatrixTranslation(cubesModelVector[i].pos.x, cubesModelVector[i].pos.y, cubesModelVector[i].pos.z);
         geomBufferInst[i].norm = geomBufferInst[i].worldMatrix;
@@ -204,19 +206,54 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
         XMFLOAT4 min, max;
         XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
         XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
-        cullingParams.bbMin[i] = min;
-        cullingParams.bbMax[i] = max;
+        boundBoxesInst[i].bbMin = min;
+        boundBoxesInst[i].bbMax = max;
     }
 
     cullingParams.numShapes = XMINT4(int(cubesModelVector.size()), 0, 0, 0);
+
+    D3D11_BUFFER_DESC descCullData;
+    descCullData.Usage = D3D11_USAGE_DEFAULT;
+    descCullData.ByteWidth = sizeof(CullingParams);
+    descCullData.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    descCullData.CPUAccessFlags = 0;
+    descCullData.MiscFlags = 0;
+    descCullData.StructureByteStride = 0;
 
     D3D11_SUBRESOURCE_DATA cullData;
     cullData.pSysMem = &cullingParams;
     cullData.SysMemPitch = sizeof(cullingParams);
     cullData.SysMemSlicePitch = 0;
-    hr = device->CreateBuffer(&descWMB, &cullData, &g_pCullingParams);
+    hr = device->CreateBuffer(&descCullData, &cullData, &g_pCullingParams);
     if (FAILED(hr))
         return hr;
+
+    D3D11_BUFFER_DESC descCullBoxes;
+    descCullBoxes.ByteWidth = sizeof(CullingBoundBox) * MAX_CUBES;
+    descCullBoxes.Usage = D3D11_USAGE_DEFAULT;
+    descCullBoxes.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+    descCullBoxes.CPUAccessFlags = 0;
+    descCullBoxes.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
+    descCullBoxes.StructureByteStride = sizeof(CullingBoundBox);
+
+    D3D11_SUBRESOURCE_DATA data1;
+    data1.pSysMem = boundBoxesInst.data();
+    data1.SysMemPitch = boundBoxesInst.size() * sizeof(CullingBoundBox);
+    data1.SysMemSlicePitch = 0;
+
+    hr = device->CreateBuffer(&descCullBoxes, &data1, &g_pCullingBoundBoxes);
+    if (FAILED(hr))
+      return hr;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC boxesViewDesc;
+    boxesViewDesc.Format = DXGI_FORMAT_UNKNOWN;
+    boxesViewDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    boxesViewDesc.Buffer.FirstElement = 0;
+    boxesViewDesc.Buffer.NumElements = MAX_CUBES;
+
+    hr = device->CreateShaderResourceView(g_pCullingBoundBoxes, &boxesViewDesc, &g_pCullingBoundBoxesView);
+    if (FAILED(hr))
+      return hr;
 
     D3D11_BUFFER_DESC argSrcDesc = {};
     argSrcDesc.ByteWidth = sizeof(D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS);
@@ -248,7 +285,7 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     D3D11_BUFFER_DESC gbDesc = {};
     gbDesc.ByteWidth = sizeof(XMINT4) * MAX_CUBES;
     gbDesc.Usage = D3D11_USAGE_DEFAULT;
-    gbDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
+    gbDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
     gbDesc.CPUAccessFlags = 0;
     gbDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
     gbDesc.StructureByteStride = sizeof(XMINT4);
@@ -260,24 +297,43 @@ HRESULT Cube::Init(ID3D11Device* device, ID3D11DeviceContext* context, int scree
     if (FAILED(hr))
         return hr;
 
-    D3D11_BUFFER_DESC gbDescGPU = {};
-    gbDescGPU.ByteWidth = sizeof(XMINT4) * MAX_CUBES;
-    gbDescGPU.Usage = D3D11_USAGE_DEFAULT;
-    gbDescGPU.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-    gbDescGPU.CPUAccessFlags = 0;
-    gbDescGPU.MiscFlags = 0;
-    gbDescGPU.StructureByteStride = 0;
+    D3D11_SHADER_RESOURCE_VIEW_DESC IndicesViewDesc;
+    IndicesViewDesc.Format = DXGI_FORMAT_UNKNOWN;
+    IndicesViewDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    IndicesViewDesc.Buffer.FirstElement = 0;
+    IndicesViewDesc.Buffer.NumElements = MAX_CUBES;
 
-    hr = device->CreateBuffer(&gbDescGPU, nullptr, &g_pGeomBufferInstVis);
+    hr = device->CreateShaderResourceView(g_pGeomBufferInstVisGpu, &IndicesViewDesc, &g_pGeomBufferInstVisGpu_SRV);
     if (FAILED(hr))
         return hr;
 
     D3D11_SUBRESOURCE_DATA data;
-    data.pSysMem = &geomBufferInst;
-    data.SysMemPitch = sizeof(geomBufferInst);
+    data.pSysMem = geomBufferInst.data();
+    data.SysMemPitch = geomBufferInst.size() * sizeof(GeomBuffer);
     data.SysMemSlicePitch = 0;
 
     hr = device->CreateBuffer(&descWMB, &data, &g_pGeomBuffer);
+    if (FAILED(hr))
+        return hr;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC viewDesc;
+    viewDesc.Format = DXGI_FORMAT_UNKNOWN;
+    viewDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFER;
+    viewDesc.Buffer.FirstElement = 0;
+    viewDesc.Buffer.NumElements = MAX_CUBES;
+
+    hr = device->CreateShaderResourceView(g_pGeomBuffer, &viewDesc, &g_pGeomBufferView);
+    if (FAILED(hr))
+      return hr;
+
+    D3D11_BUFFER_DESC descTGB;
+    ZeroMemory(&descTGB, sizeof(descTGB));
+    descTGB.ByteWidth = sizeof(GeomBuffer);
+    descTGB.Usage = D3D11_USAGE_DYNAMIC;
+    descTGB.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    descTGB.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+    hr = device->CreateBuffer(&descTGB, nullptr, &g_pTmpGeomBuffer);
     if (FAILED(hr))
         return hr;
 
@@ -362,6 +418,7 @@ void Cube::Release() {
     if (g_pSamplerState) g_pSamplerState->Release();
     if (g_pRasterizerState) g_pRasterizerState->Release();
 
+    if (g_pGeomBufferView) g_pGeomBufferView->Release();
     if (g_pGeomBuffer) g_pGeomBuffer->Release();
     if (g_LightConstantBuffer) g_LightConstantBuffer->Release();
 
@@ -377,17 +434,22 @@ void Cube::Release() {
     if (g_pInderectArgs) g_pInderectArgs->Release();
     if (g_pGeomBufferInstVisGpu) g_pGeomBufferInstVisGpu->Release();
     if (g_pGeomBufferInstVisGpu_UAV) g_pGeomBufferInstVisGpu_UAV->Release();
-    if (g_pGeomBufferInstVis) g_pGeomBufferInstVis->Release();
+    if (g_pGeomBufferInstVisGpu_SRV) g_pGeomBufferInstVisGpu_SRV->Release();
     if (g_pInderectArgsUAV) g_pInderectArgsUAV->Release();
     if (g_pCullShader) g_pCullShader->Release();
     if (g_pCullingParams) g_pCullingParams->Release();
+    if (g_pCullingBoundBoxes) g_pCullingBoundBoxes->Release();
+    if (g_pCullingBoundBoxesView) g_pCullingBoundBoxesView->Release();
 
     for (auto& q : queries) {
         q->Release();
     }
 }
 
+
 void Cube::Render(ID3D11DeviceContext* context, int drawMode) {
+    ID3D11ShaderResourceView* noResources[] = { nullptr };
+
     //drawMode = DrawMode::Instancing;
     if (drawMode == DrawMode::CPU) {
         context->OMSetDepthStencilState(g_pDepthState, 0);
@@ -411,23 +473,38 @@ void Cube::Render(ID3D11DeviceContext* context, int drawMode) {
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         context->VSSetShader(g_pVertexShader, nullptr, 0);
-        context->VSSetConstantBuffers(0, 1, &g_pGeomBuffer);
+        //context->VSSetShaderResources(10, 1, &g_pGeomBufferView);
         context->VSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
-        context->VSSetConstantBuffers(2, 1, &g_pGeomBufferInstVis);
+        //context->VSSetConstantBuffers(2, 1, &g_pGeomBufferInstVis);
 
         context->PSSetShader(g_pPixelShader, nullptr, 0);
-        context->PSSetConstantBuffers(0, 1, &g_pGeomBuffer);
+        context->PSSetShaderResources(10, 1, &g_pGeomBufferView);
         context->PSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
         context->PSSetConstantBuffers(2, 1, &g_LightConstantBuffer);
 
-        context->Begin(queries[curFrame % MAX_QUERY]);
-        context->DrawIndexedInstancedIndirect(g_pInderectArgs, 0);
-        context->End(queries[curFrame % MAX_QUERY]);
-        curFrame++;
+        for (auto& geomBuffer : geomBufferInst) {
+            context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, &geomBuffer, 0, 0);
+            context->VSSetShaderResources(10, 1, &g_pGeomBufferView);
+            context->PSSetShaderResources(10, 1, &g_pGeomBufferView);
+            //context->VSSetConstantBuffers(0, 1, &g_pTmpGeomBuffer);
+            //context->PSSetConstantBuffers(0, 1, &g_pTmpGeomBuffer);
+            context->DrawIndexed(36, 0, 0);
+            //D3D11_MAPPED_SUBRESOURCE subresource;
+            //context->Map(g_pTmpGeomBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+            //GeomBuffer& geomBuffer = *reinterpret_cast<GeomBuffer*>(subresource.pData);
+            ////memcpy(mappedResource.pData, geomBufferInst.data(), sizeof(GeomBuffer) * geomBufferInst.size());
+            //context->Unmap(pBuffer, 0);
+        }
 
-        ReadQueries(context);
+        //for (auto& buffer : g_pWorldMatrixBuffers) {
+        //    context->VSSetConstantBuffers(0, 1, &buffer);
+        //    context->PSSetConstantBuffers(0, 1, &buffer);
+        //    context->DrawIndexed(36, 0, 0);
+        //}
+
         return;
     }
+
     if (drawMode == DrawMode::Instancing) {
         context->OMSetDepthStencilState(g_pDepthState, 0);
         context->RSSetState(g_pRasterizerState);
@@ -450,12 +527,12 @@ void Cube::Render(ID3D11DeviceContext* context, int drawMode) {
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         context->VSSetShader(g_pVertexShader, nullptr, 0);
-        context->VSSetConstantBuffers(0, 1, &g_pGeomBuffer);
+        context->VSSetShaderResources(10, 1, &g_pGeomBufferView);
         context->VSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
         //context->VSSetConstantBuffers(2, 1, &g_pGeomBufferInstVis);
 
         context->PSSetShader(g_pPixelShader, nullptr, 0);
-        context->PSSetConstantBuffers(0, 1, &g_pGeomBuffer);
+        context->PSSetShaderResources(10, 1, &g_pGeomBufferView);
         context->PSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
         context->PSSetConstantBuffers(2, 1, &g_LightConstantBuffer);
 
@@ -486,12 +563,12 @@ void Cube::Render(ID3D11DeviceContext* context, int drawMode) {
         context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         context->VSSetShader(g_pVertexShader, nullptr, 0);
-        context->VSSetConstantBuffers(0, 1, &g_pGeomBuffer);
+        context->VSSetShaderResources(10, 1, &g_pGeomBufferView);
         context->VSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
-        context->VSSetConstantBuffers(2, 1, &g_pGeomBufferInstVis);
+        context->VSSetShaderResources(11, 1, &g_pGeomBufferInstVisGpu_SRV);
 
         context->PSSetShader(g_pPixelShader, nullptr, 0);
-        context->PSSetConstantBuffers(0, 1, &g_pGeomBuffer);
+        context->PSSetShaderResources(10, 1, &g_pGeomBufferView);
         context->PSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
         context->PSSetConstantBuffers(2, 1, &g_LightConstantBuffer);
 
@@ -499,11 +576,12 @@ void Cube::Render(ID3D11DeviceContext* context, int drawMode) {
         context->DrawIndexedInstancedIndirect(g_pInderectArgs, 0);
         context->End(queries[curFrame % MAX_QUERY]);
         curFrame++;
-
+        context->VSSetShaderResources(11, 1, noResources);
         ReadQueries(context);
         return;
     }
 }
+
 
 void Cube::GetFrustum(XMMATRIX viewMatrix, XMMATRIX projectionMatrix) {
     XMFLOAT4X4 pMatrix;
@@ -588,14 +666,14 @@ void Cube::GetFrustum(XMMATRIX viewMatrix, XMMATRIX projectionMatrix) {
     frustum.planes[5].w /= length;
 }
 
-bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
-        XMFLOAT3& cameraPos, const Light& lights, bool fixFrustumCulling, int drawMode) {
-    CullingParams cullingParams;
+
+bool Cube::FrameCPU(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
+        XMFLOAT3& cameraPos, const Light& lights) {
     auto duration = Timer::GetInstance().Clock();
-    GeomBuffer geomBufferInst[MAX_CUBES];
+    //std::vector<GeomBuffer> geomBufferInst = std::vector<GeomBuffer>(MAX_CUBES);
     for (int i = 0; i < MAX_CUBES; i++) {
-        geomBufferInst[i].worldMatrix = 
-            XMMatrixRotationX((float)duration * cubesModelVector[i].params.x * 0.01f) * 
+        geomBufferInst[i].worldMatrix =
+            XMMatrixRotationX((float)duration * cubesModelVector[i].params.x * 0.01f) *
             XMMatrixTranslation((float)sin(duration) * 0.5f, (float)cos(duration) * 0.5f, (float)sin(duration) * 0.5f) *
             XMMatrixRotationY((float)duration * cubesModelVector[i].params.y * 1.5f) *
             XMMatrixRotationZ((float)(sin(duration * cubesModelVector[i].params.y * 0.30f) * 0.25f)) *
@@ -605,262 +683,274 @@ bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& p
         geomBufferInst[i].params = cubesModelVector[i].params;
     }
 
-    context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, &geomBufferInst, 0, 0);
+    context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, geomBufferInst.data(), 0, 0);
+    cubesIndexies.clear();
+    for (int i = 0; i < MAX_CUBES; i++) {
+        cubesIndexies.push_back(i);
+    }
 
+    D3D11_MAPPED_SUBRESOURCE subresource;
+    HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (FAILED(hr))
+        return FAILED(hr);
+
+    CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
+    sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
+
+    //for (int i = 0; i < cubesIndexies.size(); i++)
+    //    sceneBuffer.indexBuffer[i] = XMINT4(cubesIndexies[i], 0, 0, 0);
+    sceneBuffer.drawMode = { DrawMode::CPU, 0, 0, 0 };
+
+    context->Unmap(g_pSceneMatrixBuffer, 0);
+
+    hr = context->Map(g_LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (FAILED(hr))
+        return FAILED(hr);
+
+    LightableCB& lightBuffer = *reinterpret_cast<LightableCB*>(subresource.pData);
+    lightBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
+    lightBuffer.ambientColor = XMFLOAT4(0.9f, 0.9f, 0.4f, 1.0f);
+    auto& lightColors = lights.GetColors();
+    auto& lightPos = lights.GetPositions();
+    lightBuffer.lightCount = XMINT4(int(lightColors.size()), 1, 0, 0);
+
+    for (int i = 0; i < lightColors.size(); i++) {
+        lightBuffer.lightPos[i] = XMFLOAT4(lightPos[i].x, lightPos[i].y, lightPos[i].z, 1.0f);
+        lightBuffer.lightColor[i] = XMFLOAT4(lightColors[i].x, lightColors[i].y, lightColors[i].z, 1.0f);
+    }
+    context->Unmap(g_LightConstantBuffer, 0);
+
+    return S_OK;
+}
+
+
+bool Cube::FrameInstancing(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
+        XMFLOAT3& cameraPos, const Light& lights) {
+    auto duration = Timer::GetInstance().Clock();
+    //std::vector<GeomBuffer> geomBufferInst = std::vector<GeomBuffer>(MAX_CUBES);
+    for (int i = 0; i < MAX_CUBES; i++) {
+        geomBufferInst[i].worldMatrix =
+            XMMatrixRotationX((float)duration * cubesModelVector[i].params.x * 0.01f) *
+            XMMatrixTranslation((float)sin(duration) * 0.5f, (float)cos(duration) * 0.5f, (float)sin(duration) * 0.5f) *
+            XMMatrixRotationY((float)duration * cubesModelVector[i].params.y * 1.5f) *
+            XMMatrixRotationZ((float)(sin(duration * cubesModelVector[i].params.y * 0.30f) * 0.25f)) *
+            XMMatrixTranslation((float)sin(duration * angle_velocity * cubesModelVector[i].params.y * 1.0), (float)(sin(duration * cubesModelVector[i].params.y * 0.30) * 0.25f), (float)cos(duration) * 3.0f) *
+            XMMatrixTranslation(cubesModelVector[i].pos.x, cubesModelVector[i].pos.y, cubesModelVector[i].pos.z);
+        geomBufferInst[i].norm = geomBufferInst[i].worldMatrix;
+        geomBufferInst[i].params = cubesModelVector[i].params;
+    }
+
+    context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, geomBufferInst.data(), 0, 0);
+    cubesIndexies.clear();
+    for (int i = 0; i < MAX_CUBES; i++) {
+        cubesIndexies.push_back(i);
+    }
+
+    D3D11_MAPPED_SUBRESOURCE subresource;
+    HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (FAILED(hr))
+        return FAILED(hr);
+
+    CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
+    sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
+
+    //for (int i = 0; i < cubesIndexies.size(); i++)
+    //    sceneBuffer.indexBuffer[i] = XMINT4(cubesIndexies[i], 0, 0, 0);
+    sceneBuffer.drawMode = { DrawMode::Instancing, 0, 0, 0 };
+
+    context->Unmap(g_pSceneMatrixBuffer, 0);
+
+    hr = context->Map(g_LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (FAILED(hr))
+        return FAILED(hr);
+
+    LightableCB& lightBuffer = *reinterpret_cast<LightableCB*>(subresource.pData);
+    lightBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
+    lightBuffer.ambientColor = XMFLOAT4(0.9f, 0.9f, 0.4f, 1.0f);
+    auto& lightColors = lights.GetColors();
+    auto& lightPos = lights.GetPositions();
+    lightBuffer.lightCount = XMINT4(int(lightColors.size()), 1, 0, 0);
+
+    for (int i = 0; i < lightColors.size(); i++) {
+        lightBuffer.lightPos[i] = XMFLOAT4(lightPos[i].x, lightPos[i].y, lightPos[i].z, 1.0f);
+        lightBuffer.lightColor[i] = XMFLOAT4(lightColors[i].x, lightColors[i].y, lightColors[i].z, 1.0f);
+    }
+    context->Unmap(g_LightConstantBuffer, 0);
+
+    return S_OK;
+
+
+
+
+    /*cubesIndexies.clear();
+    for (int i = 0; i < MAX_CUBES; i++) {
+        cubesIndexies.push_back(i);
+    }
+
+    D3D11_MAPPED_SUBRESOURCE subresource;
+    HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (FAILED(hr))
+        return FAILED(hr);
+
+    CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
+    sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
+
+    for (int i = 0; i < 6; i++) {
+        sceneBuffer.planes[i] = frustum.planes[i];
+    }
+    sceneBuffer.drawMode = { DrawMode::Instancing, 0, 0, 0 };
+
+    context->Unmap(g_pSceneMatrixBuffer, 0);
+
+    hr = context->Map(g_LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (FAILED(hr))
+        return FAILED(hr);
+
+    LightableCB& lightBuffer = *reinterpret_cast<LightableCB*>(subresource.pData);
+    lightBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
+    lightBuffer.ambientColor = XMFLOAT4(0.9f, 0.9f, 0.4f, 1.0f);
+    auto& lightColors = lights.GetColors();
+    auto& lightPos = lights.GetPositions();
+    lightBuffer.lightCount = XMINT4(int(lightColors.size()), 1, 0, 0);
+
+    for (int i = 0; i < lightColors.size(); i++) {
+        lightBuffer.lightPos[i] = XMFLOAT4(lightPos[i].x, lightPos[i].y, lightPos[i].z, 1.0f);
+        lightBuffer.lightColor[i] = XMFLOAT4(lightColors[i].x, lightColors[i].y, lightColors[i].z, 1.0f);
+    }
+    context->Unmap(g_LightConstantBuffer, 0);*/
+
+    //D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS args;
+    //args.IndexCountPerInstance = 36;
+    //args.InstanceCount = 0;
+    //args.StartInstanceLocation = 0;
+    //args.BaseVertexLocation = 0;
+    //args.StartIndexLocation = 0;
+    //context->UpdateSubresource(g_pInderectArgsSrc, 0, nullptr, &args, 0, 0);
+    //UINT groupNumber = MAX_CUBES / 64u + !!(MAX_CUBES % 64u);
+    //context->CSSetConstantBuffers(0, 1, &g_pCullingParams);
+    //context->CSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
+    //context->CSSetUnorderedAccessViews(0, 1, &g_pInderectArgsUAV, nullptr);
+    //context->CSSetUnorderedAccessViews(1, 1, &g_pGeomBufferInstVisGpu_UAV, nullptr);
+    //context->CSSetShader(g_pCullShader, nullptr, 0);
+    //context->Dispatch(groupNumber, 1, 1);
+
+    //context->CopyResource(g_pGeomBufferInstVis, g_pGeomBufferInstVisGpu);
+    //context->CopyResource(g_pInderectArgs, g_pInderectArgsSrc);
+
+    return S_OK;
+}
+
+
+bool Cube::FrameGPUCulling(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
+        XMFLOAT3& cameraPos, const Light& lights, bool fixFrustumCulling) {
+    CullingParams cullingParams;
+    auto duration = Timer::GetInstance().Clock();
+    //std::vector<GeomBuffer> geomBufferInst = std::vector<GeomBuffer>(MAX_CUBES);
+    std::vector<CullingBoundBox> cullingBoxes = std::vector<CullingBoundBox>(MAX_CUBES);
+    for (int i = 0; i < MAX_CUBES; i++) {
+        geomBufferInst[i].worldMatrix =
+            XMMatrixRotationX((float)duration * cubesModelVector[i].params.x * 0.01f) *
+            XMMatrixTranslation((float)sin(duration) * 0.5f, (float)cos(duration) * 0.5f, (float)sin(duration) * 0.5f) *
+            XMMatrixRotationY((float)duration * cubesModelVector[i].params.y * 1.5f) *
+            XMMatrixRotationZ((float)(sin(duration * cubesModelVector[i].params.y * 0.30f) * 0.25f)) *
+            XMMatrixTranslation((float)sin(duration * angle_velocity * cubesModelVector[i].params.y * 1.0), (float)(sin(duration * cubesModelVector[i].params.y * 0.30) * 0.25f), (float)cos(duration) * 3.0f) *
+            XMMatrixTranslation(cubesModelVector[i].pos.x, cubesModelVector[i].pos.y, cubesModelVector[i].pos.z);
+        geomBufferInst[i].norm = geomBufferInst[i].worldMatrix;
+        geomBufferInst[i].params = cubesModelVector[i].params;
+    }
+
+    context->UpdateSubresource(g_pGeomBuffer, 0, nullptr, geomBufferInst.data(), 0, 0);
+    if (!fixFrustumCulling) {
+        GetFrustum(viewMatrix, projectionMatrix);
+    }
+
+    static const XMFLOAT4 AABB[] = {
+        {-0.5, -0.5, -0.5, 1.0},
+        {0.5,  0.5, 0.5, 1.0}
+    };
+
+    cubesIndexies.clear();
+    for (int i = 0; i < MAX_CUBES; i++) {
+        XMFLOAT4 min, max;
+
+        XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
+        XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
+
+        cubesIndexies.push_back(i);
+
+        cullingBoxes[i].bbMin = min;
+        cullingBoxes[i].bbMax = max;
+    }
+
+    cullingParams.numShapes = XMINT4(MAX_CUBES, 0, 0, 0);
+    context->UpdateSubresource(g_pCullingBoundBoxes, 0, nullptr, cullingBoxes.data(), 0, 0);
+
+    D3D11_MAPPED_SUBRESOURCE subresource;
+    HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (FAILED(hr))
+        return FAILED(hr);
+
+    CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
+    sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
+
+    for (int i = 0; i < 6; i++) {
+        sceneBuffer.planes[i] = frustum.planes[i];
+    }
+    sceneBuffer.drawMode = { DrawMode::GPU, 0, 0, 0 };
+
+    context->Unmap(g_pSceneMatrixBuffer, 0);
+
+    hr = context->Map(g_LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
+    if (FAILED(hr))
+        return FAILED(hr);
+
+    LightableCB& lightBuffer = *reinterpret_cast<LightableCB*>(subresource.pData);
+    lightBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
+    lightBuffer.ambientColor = XMFLOAT4(0.9f, 0.9f, 0.4f, 1.0f);
+    auto& lightColors = lights.GetColors();
+    auto& lightPos = lights.GetPositions();
+    lightBuffer.lightCount = XMINT4(int(lightColors.size()), 1, 0, 0);
+
+    for (int i = 0; i < lightColors.size(); i++) {
+        lightBuffer.lightPos[i] = XMFLOAT4(lightPos[i].x, lightPos[i].y, lightPos[i].z, 1.0f);
+        lightBuffer.lightColor[i] = XMFLOAT4(lightColors[i].x, lightColors[i].y, lightColors[i].z, 1.0f);
+    }
+    context->Unmap(g_LightConstantBuffer, 0);
+
+    D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS args;
+    args.IndexCountPerInstance = 36;
+    args.InstanceCount = 0;
+    args.StartInstanceLocation = 0;
+    args.BaseVertexLocation = 0;
+    args.StartIndexLocation = 0;
+    context->UpdateSubresource(g_pInderectArgsSrc, 0, nullptr, &args, 0, 0);
+    UINT groupNumber = MAX_CUBES / 64u + !!(MAX_CUBES % 64u);
+    context->CSSetConstantBuffers(0, 1, &g_pCullingParams);
+    context->CSSetShaderResources(9, 1, &g_pCullingBoundBoxesView);
+    context->CSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
+    context->CSSetUnorderedAccessViews(0, 1, &g_pInderectArgsUAV, nullptr);
+    context->CSSetUnorderedAccessViews(1, 1, &g_pGeomBufferInstVisGpu_UAV, nullptr);
+    context->CSSetShader(g_pCullShader, nullptr, 0);
+    context->Dispatch(groupNumber, 1, 1);
+
+    //context->CopyResource(g_pGeomBufferInstVis, g_pGeomBufferInstVisGpu);
+    context->CopyResource(g_pInderectArgs, g_pInderectArgsSrc);
+
+    return S_OK;
+}
+
+
+bool Cube::Frame(ID3D11DeviceContext* context, XMMATRIX& viewMatrix, XMMATRIX& projectionMatrix,
+        XMFLOAT3& cameraPos, const Light& lights, bool fixFrustumCulling, int drawMode) {
     if (drawMode == DrawMode::CPU) {
-        if (!fixFrustumCulling) {
-            GetFrustum(viewMatrix, projectionMatrix);
-        }
-
-        static const XMFLOAT4 AABB[] = {
-            {-0.5, -0.5, -0.5, 1.0},
-            {0.5,  0.5, 0.5, 1.0}
-        };
-
-        cubesIndexies.clear();
-        for (int i = 0; i < MAX_CUBES; i++) {
-            XMFLOAT4 min, max;
-
-            XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
-            XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
-
-            cubesIndexies.push_back(i);
-
-            cullingParams.bbMin[i] = min;
-            cullingParams.bbMax[i] = max;
-        }
-
-        cullingParams.numShapes = XMINT4(MAX_CUBES, 0, 0, 0);
-        context->UpdateSubresource(g_pCullingParams, 0, nullptr, &cullingParams, 0, 0);
-
-        D3D11_MAPPED_SUBRESOURCE subresource;
-        HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
-        if (FAILED(hr))
-            return FAILED(hr);
-
-        CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
-        sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
-
-        for (int i = 0; i < 6; i++) {
-            sceneBuffer.planes[i] = frustum.planes[i];
-        }
-
-        context->Unmap(g_pSceneMatrixBuffer, 0);
-
-        hr = context->Map(g_LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
-        if (FAILED(hr))
-            return FAILED(hr);
-
-        LightableCB& lightBuffer = *reinterpret_cast<LightableCB*>(subresource.pData);
-        lightBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
-        lightBuffer.ambientColor = XMFLOAT4(0.9f, 0.9f, 0.4f, 1.0f);
-        auto& lightColors = lights.GetColors();
-        auto& lightPos = lights.GetPositions();
-        lightBuffer.lightCount = XMINT4(int(lightColors.size()), 1, 0, 0);
-
-        for (int i = 0; i < lightColors.size(); i++) {
-            lightBuffer.lightPos[i] = XMFLOAT4(lightPos[i].x, lightPos[i].y, lightPos[i].z, 1.0f);
-            lightBuffer.lightColor[i] = XMFLOAT4(lightColors[i].x, lightColors[i].y, lightColors[i].z, 1.0f);
-        }
-        context->Unmap(g_LightConstantBuffer, 0);
-
-        D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS args;
-        args.IndexCountPerInstance = 36;
-        args.InstanceCount = 0;
-        args.StartInstanceLocation = 0;
-        args.BaseVertexLocation = 0;
-        args.StartIndexLocation = 0;
-        context->UpdateSubresource(g_pInderectArgsSrc, 0, nullptr, &args, 0, 0);
-        UINT groupNumber = MAX_CUBES / 64u + !!(MAX_CUBES % 64u);
-        context->CSSetConstantBuffers(0, 1, &g_pCullingParams);
-        context->CSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
-        context->CSSetUnorderedAccessViews(0, 1, &g_pInderectArgsUAV, nullptr);
-        context->CSSetUnorderedAccessViews(1, 1, &g_pGeomBufferInstVisGpu_UAV, nullptr);
-        context->CSSetShader(g_pCullShader, nullptr, 0);
-        context->Dispatch(groupNumber, 1, 1);
-
-        context->CopyResource(g_pGeomBufferInstVis, g_pGeomBufferInstVisGpu);
-        context->CopyResource(g_pInderectArgs, g_pInderectArgsSrc);
-
-        return S_OK;
+        return FrameCPU(context, viewMatrix, projectionMatrix, cameraPos, lights);
     }
 
     if (drawMode == DrawMode::Instancing) {
-        cubesIndexies.clear();
-        for (int i = 0; i < MAX_CUBES; i++) {
-            cubesIndexies.push_back(i);
-        }
-
-        D3D11_MAPPED_SUBRESOURCE subresource;
-        HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
-        if (FAILED(hr))
-            return FAILED(hr);
-
-        CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
-        sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
-
-        //for (int i = 0; i < cubesIndexies.size(); i++)
-        //    sceneBuffer.indexBuffer[i] = XMINT4(cubesIndexies[i], 0, 0, 0);
-
-        context->Unmap(g_pSceneMatrixBuffer, 0);
-
-        hr = context->Map(g_LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
-        if (FAILED(hr))
-            return FAILED(hr);
-
-        LightableCB& lightBuffer = *reinterpret_cast<LightableCB*>(subresource.pData);
-        lightBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
-        lightBuffer.ambientColor = XMFLOAT4(0.9f, 0.9f, 0.4f, 1.0f);
-        auto& lightColors = lights.GetColors();
-        auto& lightPos = lights.GetPositions();
-        lightBuffer.lightCount = XMINT4(int(lightColors.size()), 1, 0, 0);
-
-        for (int i = 0; i < lightColors.size(); i++) {
-            lightBuffer.lightPos[i] = XMFLOAT4(lightPos[i].x, lightPos[i].y, lightPos[i].z, 1.0f);
-            lightBuffer.lightColor[i] = XMFLOAT4(lightColors[i].x, lightColors[i].y, lightColors[i].z, 1.0f);
-        }
-        context->Unmap(g_LightConstantBuffer, 0);
-
-        return S_OK;
-
-
-
-
-        /*cubesIndexies.clear();
-        for (int i = 0; i < MAX_CUBES; i++) {
-            cubesIndexies.push_back(i);
-        }
-
-        cullingParams.numShapes = XMINT4(MAX_CUBES, 0, 0, 0);
-        context->UpdateSubresource(g_pCullingParams, 0, nullptr, &cullingParams, 0, 0);
-
-        D3D11_MAPPED_SUBRESOURCE subresource;
-        HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
-        if (FAILED(hr))
-            return FAILED(hr);
-
-        CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
-        sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
-
-        for (int i = 0; i < 6; i++) {
-            sceneBuffer.planes[i] = frustum.planes[i];
-        }
-
-        context->Unmap(g_pSceneMatrixBuffer, 0);
-
-        hr = context->Map(g_LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
-        if (FAILED(hr))
-            return FAILED(hr);
-
-        LightableCB& lightBuffer = *reinterpret_cast<LightableCB*>(subresource.pData);
-        lightBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
-        lightBuffer.ambientColor = XMFLOAT4(0.9f, 0.9f, 0.4f, 1.0f);
-        auto& lightColors = lights.GetColors();
-        auto& lightPos = lights.GetPositions();
-        lightBuffer.lightCount = XMINT4(int(lightColors.size()), 1, 0, 0);
-
-        for (int i = 0; i < lightColors.size(); i++) {
-            lightBuffer.lightPos[i] = XMFLOAT4(lightPos[i].x, lightPos[i].y, lightPos[i].z, 1.0f);
-            lightBuffer.lightColor[i] = XMFLOAT4(lightColors[i].x, lightColors[i].y, lightColors[i].z, 1.0f);
-        }
-        context->Unmap(g_LightConstantBuffer, 0);*/
-
-        //D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS args;
-        //args.IndexCountPerInstance = 36;
-        //args.InstanceCount = 0;
-        //args.StartInstanceLocation = 0;
-        //args.BaseVertexLocation = 0;
-        //args.StartIndexLocation = 0;
-        //context->UpdateSubresource(g_pInderectArgsSrc, 0, nullptr, &args, 0, 0);
-        //UINT groupNumber = MAX_CUBES / 64u + !!(MAX_CUBES % 64u);
-        //context->CSSetConstantBuffers(0, 1, &g_pCullingParams);
-        //context->CSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
-        //context->CSSetUnorderedAccessViews(0, 1, &g_pInderectArgsUAV, nullptr);
-        //context->CSSetUnorderedAccessViews(1, 1, &g_pGeomBufferInstVisGpu_UAV, nullptr);
-        //context->CSSetShader(g_pCullShader, nullptr, 0);
-        //context->Dispatch(groupNumber, 1, 1);
-
-        //context->CopyResource(g_pGeomBufferInstVis, g_pGeomBufferInstVisGpu);
-        //context->CopyResource(g_pInderectArgs, g_pInderectArgsSrc);
-
-        return S_OK;
+        return FrameInstancing(context, viewMatrix, projectionMatrix, cameraPos, lights);
     }
 
     if (drawMode == DrawMode::GPU) {
-        if (!fixFrustumCulling) {
-            GetFrustum(viewMatrix, projectionMatrix);
-        }
-
-        static const XMFLOAT4 AABB[] = {
-            {-0.5, -0.5, -0.5, 1.0},
-            {0.5,  0.5, 0.5, 1.0}
-        };
-
-        cubesIndexies.clear();
-        for (int i = 0; i < MAX_CUBES; i++) {
-            XMFLOAT4 min, max;
-
-            XMStoreFloat4(&min, XMVector4Transform(XMLoadFloat4(&AABB[0]), geomBufferInst[i].worldMatrix));
-            XMStoreFloat4(&max, XMVector4Transform(XMLoadFloat4(&AABB[1]), geomBufferInst[i].worldMatrix));
-
-            cubesIndexies.push_back(i);
-
-            cullingParams.bbMin[i] = min;
-            cullingParams.bbMax[i] = max;
-        }
-
-        cullingParams.numShapes = XMINT4(MAX_CUBES, 0, 0, 0);
-        context->UpdateSubresource(g_pCullingParams, 0, nullptr, &cullingParams, 0, 0);
-
-        D3D11_MAPPED_SUBRESOURCE subresource;
-        HRESULT hr = context->Map(g_pSceneMatrixBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
-        if (FAILED(hr))
-            return FAILED(hr);
-
-        CubeSceneMatrixBuffer& sceneBuffer = *reinterpret_cast<CubeSceneMatrixBuffer*>(subresource.pData);
-        sceneBuffer.viewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
-
-        for (int i = 0; i < 6; i++) {
-            sceneBuffer.planes[i] = frustum.planes[i];
-        }
-
-        context->Unmap(g_pSceneMatrixBuffer, 0);
-
-        hr = context->Map(g_LightConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &subresource);
-        if (FAILED(hr))
-            return FAILED(hr);
-
-        LightableCB& lightBuffer = *reinterpret_cast<LightableCB*>(subresource.pData);
-        lightBuffer.cameraPos = XMFLOAT4(cameraPos.x, cameraPos.y, cameraPos.z, 1.0f);
-        lightBuffer.ambientColor = XMFLOAT4(0.9f, 0.9f, 0.4f, 1.0f);
-        auto& lightColors = lights.GetColors();
-        auto& lightPos = lights.GetPositions();
-        lightBuffer.lightCount = XMINT4(int(lightColors.size()), 1, 0, 0);
-
-        for (int i = 0; i < lightColors.size(); i++) {
-            lightBuffer.lightPos[i] = XMFLOAT4(lightPos[i].x, lightPos[i].y, lightPos[i].z, 1.0f);
-            lightBuffer.lightColor[i] = XMFLOAT4(lightColors[i].x, lightColors[i].y, lightColors[i].z, 1.0f);
-        }
-        context->Unmap(g_LightConstantBuffer, 0);
-
-        D3D11_DRAW_INDEXED_INSTANCED_INDIRECT_ARGS args;
-        args.IndexCountPerInstance = 36;
-        args.InstanceCount = 0;
-        args.StartInstanceLocation = 0;
-        args.BaseVertexLocation = 0;
-        args.StartIndexLocation = 0;
-        context->UpdateSubresource(g_pInderectArgsSrc, 0, nullptr, &args, 0, 0);
-        UINT groupNumber = MAX_CUBES / 64u + !!(MAX_CUBES % 64u);
-        context->CSSetConstantBuffers(0, 1, &g_pCullingParams);
-        context->CSSetConstantBuffers(1, 1, &g_pSceneMatrixBuffer);
-        context->CSSetUnorderedAccessViews(0, 1, &g_pInderectArgsUAV, nullptr);
-        context->CSSetUnorderedAccessViews(1, 1, &g_pGeomBufferInstVisGpu_UAV, nullptr);
-        context->CSSetShader(g_pCullShader, nullptr, 0);
-        context->Dispatch(groupNumber, 1, 1);
-
-        context->CopyResource(g_pGeomBufferInstVis, g_pGeomBufferInstVisGpu);
-        context->CopyResource(g_pInderectArgs, g_pInderectArgsSrc);
-
-        return S_OK;
+        return FrameGPUCulling(context, viewMatrix, projectionMatrix, cameraPos, lights, fixFrustumCulling);
     }
 }
